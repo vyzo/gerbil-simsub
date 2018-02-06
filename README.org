@@ -1,0 +1,85 @@
+* A PubSub Protocol and its Simulator
+
+This is a pubsub protocol, dubbed ~gossipsub~, aka ~meshsub/1.0.0~.
+The basic idea is to start from a connected network with an arbitrary
+degree and reduce it to a mesh with a specific degree. Messages are
+forwarded through the reduced mesh. The mesh is augmented by /gossip/
+about forwarded messages, which is regularly flooded to known peers
+with a heartbeat.
+
+* Installation
+
+The code is written in Gerbil, and you can install it through the
+Gerbil package manager:
+
+#+BEGIN_EXAMPLE
+$ gxpkg install github.com/vyzo/gerbil-simsub
+#+END_EXAMPLE
+
+* Simulation
+
+The simulator constructs a network of ~N~ nodes, and randomly connects
+it with a connectivity degree ~N-connect~.
+There is a random latency between any pair of nodes, selected uniformly
+in the ~[.01s, .15s]~ interval.
+The simulatoion script sends a number ~M~ of messages, by selecting ~fanout~ random
+peers and publishing to them. Each successive message is sent after some delay
+~M-delay~.
+
+#+BEGIN_EXAMPLE
+$ gxi
+> (import :vyzo/simsub/scripts)
+> (simple-gossipsub-simulation trace: void) ; N = 100, N-connect = 10, M = 10, M-delay = 1
+=== simulation summary ===
+nodes: 100
+messages: 10
+fanout: 5
+publish: 50
+deliver: 1000
+!!gossipsub.prune: 247
+!!pubsub.publish: 6852
+!!gossipsub.link: 527
+!!gossipsub.iwant: 191
+!!gossipsub.ihave: 18219
+!!gossipsub.graft: 943
+!!gossipsub.unlink: 241
+!!pubsub.connect: 1000
+
+> (simple-gossipsub-simulation trace: void messages: 100 message-delay: .1)
+=== simulation summary ===
+nodes: 100
+messages: 100
+fanout: 5
+publish: 500
+deliver: 10000
+!!gossipsub.iwant: 449
+!!pubsub.publish: 67742
+!!gossipsub.link: 511
+!!gossipsub.ihave: 21530
+!!gossipsub.graft: 921
+!!gossipsub.unlink: 189
+!!pubsub.connect: 1000
+!!gossipsub.prune: 219
+
+> (simple-gossipsub-simulation trace: void messages: 1000 message-delay: .01)
+=== simulation summary ===
+nodes: 100
+messages: 1000
+fanout: 5
+publish: 5000
+deliver: 100000
+!!gossipsub.prune: 349
+!!pubsub.publish: 645840
+!!gossipsub.link: 584
+!!gossipsub.iwant: 4108
+!!gossipsub.ihave: 41800
+!!gossipsub.graft: 1016
+!!gossipsub.unlink: 309
+!!pubsub.connect: 1000
+
+#+END_EXAMPLE
+
+If you want to see a trace of the developing simulation,
+then omit the ~trace: void~ argument to the simulation invocation.
+The default ~trace:~ will be ~displayln~, which will print out the simulation
+in the current output port.
