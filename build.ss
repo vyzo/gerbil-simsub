@@ -4,4 +4,6 @@
 
 (defbuild-script
   '("simsub/env"
-    "simsub/gossip"))
+    "simsub/gossip"
+    "simsub/simulator"
+    "simsub/scripts"))
