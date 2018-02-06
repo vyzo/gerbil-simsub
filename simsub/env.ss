@@ -33,3 +33,6 @@
 
 (def (trace-ts)
   (##current-time-point))
+
+(def (make-timeout dt)
+  (seconds->time (+ (##current-time-point) dt)))

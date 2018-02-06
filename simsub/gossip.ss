@@ -178,6 +178,3 @@
    (loop)
    (catch (e)
      (log-error "unhandled exception" e))))
-
-(def (make-timeout dt)
-  (seconds->time (+ (time->seconds (current-time)) dt)))
