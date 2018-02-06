@@ -12,6 +12,8 @@
         :vyzo/simsub/env)
 (export #t)
 
+(declare (fixnum))
+
 (defproto pubsub
   event:
   (connect)
