@@ -16,6 +16,13 @@
                                   messages: (messages 10)
                                   wait: (wait 10)
                                   trace: (trace displayln))
+  (def traces (box []))
+
+  (def (my-trace evt)
+    (set! (box traces)
+      (cons evt (unbox traces)))
+    (trace evt))
+
   (def (my-script peers)
     (thread-sleep! 3)
     (let (peers (shuffle peers))
@@ -30,8 +37,32 @@
           (lp (1+ i))))
       (thread-sleep! wait)))
 
+  (def (display-summary!)
+    (def publish 0)
+    (def deliver 0)
+    (def send (make-hash-table-eq))
+
+    (for (evt (unbox traces))
+      (match evt
+        (['trace ts src dest [what . _]]
+         (hash-update! send what 1+ 0))
+        (['publish . _]
+         (set! publish (1+ publish)))
+        (['deliver . _]
+         (set! deliver (1+ deliver)))))
+
+    (displayln "=== simulation summary ===")
+    (displayln "nodes: " nodes)
+    (displayln "messages: " messages)
+    (displayln "fanout: " fanout)
+    (displayln "publish: " publish)
+    (displayln "deliver: " deliver)
+    (for ((values msg count) send)
+      (displayln msg ": " count)))
+
   (let (simulator (start-simulation! script: my-script
+                                     trace: my-trace
                                      router: gossipsub-router
-                                     nodes: nodes
-                                     trace: trace))
-    (thread-join! simulator)))
+                                     nodes: nodes))
+    (thread-join! simulator)
+    (display-summary!)))
