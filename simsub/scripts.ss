@@ -14,6 +14,8 @@
 (def (simple-gossipsub-simulation nodes: (nodes 100)
                                   fanout: (fanout 5)
                                   messages: (messages 10)
+                                  message-delay: (message-delay 1)
+                                  connect-delay: (connect-delay 3)
                                   wait: (wait 10)
                                   trace: (trace displayln))
   (def traces (box []))
@@ -24,7 +26,7 @@
     (trace evt))
 
   (def (my-script peers)
-    (thread-sleep! 3)
+    (thread-sleep! connect-delay)
     (let (peers (shuffle peers))
       (let lp ((i 0))
         (when (< i messages)
@@ -33,7 +35,7 @@
               (let (msg (cons 'msg i))
                 (trace-publish! i msg)
                 (trace! (!!pubsub.publish peer i msg)))))
-          (thread-sleep! 1)
+          (thread-sleep! message-delay)
           (lp (1+ i))))
       (thread-sleep! wait)))
 
