@@ -9,11 +9,31 @@
 (def current-protocol-trace
   (make-parameter #f))
 
+(def current-protocol-router
+  (make-parameter #f))
+
 (defproto protocol
   event:
   (trace ts msg)
   (publish ts msg)
   (deliver ts msg))
+
+(defsyntax (send! stx)
+  (syntax-case stx ()
+    ((_ (message peer arg ...))
+     (with-syntax ((event
+                    (let* ((str (symbol->string (stx-e #'message)))
+                           (str (substring str 2 (string-length str)))
+                           (sym (string->symbol str)))
+                      (stx-identifier #'message sym))))
+       #'(cond
+          ((current-protocol-router)
+           => (lambda (actor)
+                (trace-send! peer ['message arg ...])
+                (send actor (make-message (!event (event arg ...)) (current-thread) peer #f))))
+          (else
+           (trace-send! peer ['message arg ...])
+           (message peer arg ...)))))))
 
 (defrules trace! ()
   ((_ (message peer arg ...))
@@ -52,3 +72,7 @@
 
 (def (make-timeout dt)
   (seconds->time (+ (##current-time-point) dt)))
+
+(def (time< t1 t2)
+  (< (time->seconds t1)
+     (time->seconds t2)))
