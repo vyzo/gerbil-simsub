@@ -3,4 +3,5 @@
 (import :std/build-script)
 
 (defbuild-script
-  '("simsub/gossip"))
+  '("simsub/env"
+    "simsub/gossip"))

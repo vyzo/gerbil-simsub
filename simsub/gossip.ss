@@ -1,4 +1,6 @@
 ;; -*- Gerbil -*-
+;; © vyzo
+;; gossipsub aka meshsub/1
 
 (import :gerbil/gambit
         :std/actor
@@ -6,7 +8,8 @@
         :std/iter
         :std/sugar
         :std/misc/shuffle
-        (only-in :std/srfi/1 take drop-right))
+        (only-in :std/srfi/1 take drop-right)
+        :vyzo/simsub/env)
 (export #t)
 
 (defproto pubsub
@@ -50,7 +53,7 @@
     (let (new-peers (filter (lambda (peer) (not (memq peer peers)))
                             new-peers))
       (for (peer new-peers)
-        (!!pubsub.connect peer))
+        (trace! (!!pubsub.connect peer)))
       (set! peers
         (foldl cons peers new-peers))))
 
@@ -69,7 +72,7 @@
                            (take candidates i-need)
                            candidates)))
         (for (peer candidates)
-          (!!gossipsub.link peer))))
+          (trace! (!!gossipsub.link peer)))))
 
     (when (> d-in N-in-high)
       ;; we have too many inbound links, send UNLINK to some peers
@@ -77,7 +80,7 @@
              (candidates (shuffle D-in))
              (candidates (take candidates to-drop)))
         (for (peer candidates)
-          (!!gossipsub.unlink peer))))
+          (trace! (!!gossipsub.unlink peer)))))
 
     (when (< d-out N-out-low)
       ;; we have too few outbound links, add some peers and send GRAFT
@@ -90,7 +93,7 @@
                            candidates)))
         (set! D-out (foldl cons D-out candidates))
         (for (peer candidates)
-          (!!gossipsub.graft peer))))
+          (trace! (!!gossipsub.graft peer)))))
 
     (when (> d-out N-out-high)
       ;; we have too many outbound links, drop some peers and send PRUNE
@@ -99,7 +102,7 @@
              (candidates (take candidates to-drop)))
         (for (peer candidates)
           (set! D-out (remq peer D-out))
-          (!!gossipsub.prune peer))))
+          (trace! (!!gossipsub.prune peer)))))
 
     ;; message history management
     (set! history (cons window history))
@@ -119,7 +122,7 @@
                        history)))
       (unless (null? ids)
         (for (peer peers)
-          (!!gossipsub.ihave peer ids))))
+          (trace! (!!gossipsub.ihave peer ids)))))
 
     (set! heartbeat (make-timeout 1)))
 
@@ -136,28 +139,28 @@
            (receive id msg)
            ;; and forward
            (for (peer (remq @source D-out))
-             (!!pubsub.publish peer id msg))))
+             (trace! (!!pubsub.publish peer id msg)))))
 
         ((!gossipsub.ihave ids)
          (let (iwant (filter (lambda (id) (not (hash-get messages id)))
                              ids))
            (unless (null? iwant)
-             (!!gossipsub.iwant @source iwant))))
+             (trace! (!!gossipsub.iwant @source iwant)))))
 
         ((!gossipsub.iwant ids)
          (for (id ids)
            (alet (msg (hash-get messages id))
-             (!!pubsub.publish @source id msg))))
+             (trace! (!!pubsub.publish @source id msg)))))
 
         ((!gossipsub.link)
          (unless (memq @source D-out)
            (set! D-out (cons @source D-out))
-           (!!gossipsub.graft @source)))
+           (trace! (!!gossipsub.graft @source))))
 
         ((!gossipsub.unlink)
          (when (memq @source D-out)
            (set! D-out (remq @source D-out))
-           (!!gossipsub.prune @source)))
+           (trace! (!!gossipsub.prune @source))))
 
         ((!gossipsub.graft)
          (unless (memq @source D-in)
