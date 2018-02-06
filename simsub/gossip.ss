@@ -37,7 +37,7 @@
 (def N-out-low 4)
 (def N-out-high 12)
 
-(def history-gossip 5)
+(def history-gossip 1)
 (def history-length 30)
 
 ;; receive: lambda (msg-id msg-data)

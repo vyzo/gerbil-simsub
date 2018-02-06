@@ -21,8 +21,8 @@
 
 (def (start-simulation! script: script
                         router: router
-                        nodes: nodes
                         trace: trace
+                        nodes: nodes
                         N-connect: (N-connect 10)
                         receive: (receive trace-deliver!))
   (start-logger!)
@@ -37,13 +37,19 @@
 
 (def (simulator-main script nodes N-connect trace router receive)
   (def script-node
-    (spawn/name 'driver simulator-driver 0 script))
+    (parameterize ((current-protocol-trace (current-thread)))
+      (let (thr (spawn/name 'driver simulator-driver script))
+        (thread-specific-set! thr 0)
+        thr)))
+
   (def peer-nodes
-    (map (lambda (id)
-           (let (thr (spawn/name 'peer simulator-node id router receive))
-             (spawn/name 'monitor simulator-monitor (current-thread) thr)
-             thr))
-         (iota nodes 1)))
+    (parameterize ((current-protocol-trace (current-thread)))
+      (map (lambda (id)
+             (let (thr (spawn/name 'peer simulator-node router receive))
+               (spawn/name 'monitor simulator-monitor (current-thread) thr)
+               (thread-specific-set! thr id)
+               thr))
+           (iota nodes 1))))
 
   (def (run)
     (for (peer peer-nodes)
@@ -60,7 +66,8 @@
     (<- ((!simulator.shutdown)
          (shutdown!))
         ((!simulator.join actor)
-         (warning "actor exited unexpectedly" actor)
+         (unless (eq? actor script-node)
+           (warning "actor exited unexpectedly ~a" actor))
          (when (eq? actor script-node)
            (shutdown!)))
         ((!protocol.trace ts msg)
@@ -77,14 +84,13 @@
     (raise 'shutdown))
 
   (try
-   (parameterize ((current-protocol-trace (current-thread)))
-     (run))
+   (run)
    (catch (e)
      (unless (eq? 'shutdown e)
        (log-error "unhandled exception" e)
        (raise e)))))
 
-(def (simulator-driver id script)
+(def (simulator-driver script)
   (def (run peers)
     (try
      (script peers)
@@ -92,11 +98,10 @@
        (log-error "unhandled exception" e)
        (raise e))))
 
-  (thread-specific-set! id)
   (<- ((!simulator.start peers)
        (run peers))))
 
-(def (simulator-node id router receive)
+(def (simulator-node router receive)
   (def (run peers)
     (try
      (router receive peers)
@@ -104,7 +109,6 @@
        (log-error "unhandled exception" e)
        (raise e))))
 
-  (thread-specific-set! id)
   (<- ((!simulator.start peers)
        (run peers))))
 
