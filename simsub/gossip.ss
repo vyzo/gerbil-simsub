@@ -36,7 +36,7 @@
 (def N-out-high 12)
 
 (def history-gossip 5)
-(def history-length 10)
+(def history-length 30)
 
 ;; receive: lambda (msg-id msg-data)
 ;; initial-peers: list of peers to connect
