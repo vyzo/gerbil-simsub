@@ -16,6 +16,214 @@ Gerbil package manager:
 $ gxpkg install github.com/vyzo/gerbil-simsub
 #+END_EXAMPLE
 
+* The ~gossipsub~ Protocol
+
+The gossipsub router is implemented as an /actor/ in [[simsub/gossip.ss]].
+
+** Protocol
+The protocol is defined in two layers: basic pubsub, and gossipsub:
+
+#+BEGIN_SRC gerbil
+(defproto pubsub
+  event:
+  (connect)
+  (publish id data))
+
+(defproto gossipsub
+  extend: pubsub
+  event:
+  (ihave ids)
+  (iwant ids)
+  (link)
+  (unlink)
+  (graft)
+  (prune))
+#+END_SRC
+
+The baseline ~pubsub~ protocol specifies 2 messages:
++ ~CONNECT~ which establishes a symmetric connection to the peer.
++ ~PUBLISH~ which forwards a message to the peer.
+
+The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
++ ~IHAVE~ is the gossip message, which specifies recent messages ids in the peer's
+  history.
++ ~IWANT~ is used to ask for specific messages by id.
++ ~LINK~ is used to request grafting a mesh link.
++ ~UNLINK~ is used to request pruning of a message link.
++ ~GRAFT~ is used to notify a peer that a mesh link has been grafted.
++ ~PRUNE~ is used to notify a peer that a mesh link has been pruned.
+
+** Overlay Parameters
+
+#+BEGIN_SRC gerbil
+(def N-in 6)            ; target inbound degree
+(def N-in-low 4)        ; low water mark for inbound degree
+(def N-in-high 9)       ; high water mark for inbound degree
+(def N-out 6)           ; target outbound degree
+(def N-out-low 4)       ; low water mark for outbound degree
+(def N-out-high 12)     ; high water mark for outbound degree
+
+(def history-gossip 3)  ; length of gossip history
+(def history-length 30) ; length of total message history
+#+END_SRC
+
+** Actor State
+
+#+BEGIN_SRC gerbil
+  (def messages (make-hash-table-eqv))  ; messages seen: message-id -> data
+  (def window [])                       ; messages in current window: [message-id ...]
+  (def history [])                      ; message history: [window ...]
+  (def peers [])                        ; connected peers
+  (def D-in [])                         ; inbound peers in the mesh
+  (def D-out [])                        ; outbound peer in the mesh
+  (def heartbeat                        ; next heartbeat time
+    (make-timeout (1+ (random-real))))
+#+END_SRC
+
+** Reaction Loop
+
+#+BEGIN_SRC gerbil
+  (def (loop)
+    (<- ((!pubsub.connect)
+         (unless (memq @source peers)
+           (set! peers (cons @source peers))))
+
+        ((!pubsub.publish id msg)
+         (unless (hash-get messages id) ; seen?
+           (hash-put! messages id msg)
+           (set! window (cons id window))
+           ;; deliver
+           (receive id msg)
+           ;; and forward
+           (for (peer (remq @source D-out))
+             (send! (!!pubsub.publish peer id msg)))))
+
+        ((!gossipsub.ihave ids)
+         (let (iwant (filter (lambda (id) (not (hash-get messages id)))
+                             ids))
+           (unless (null? iwant)
+             (send! (!!gossipsub.iwant @source iwant)))))
+
+        ((!gossipsub.iwant ids)
+         (for (id ids)
+           (alet (msg (hash-get messages id))
+             (send! (!!pubsub.publish @source id msg)))))
+
+        ((!gossipsub.link)
+         (unless (memq @source D-out)
+           (set! D-out (cons @source D-out))
+           (send! (!!gossipsub.graft @source))))
+
+        ((!gossipsub.unlink)
+         (when (memq @source D-out)
+           (set! D-out (remq @source D-out))
+           (send! (!!gossipsub.prune @source))))
+
+        ((!gossipsub.graft)
+         (unless (memq @source D-in)
+           (set! D-in (cons @source D-in))))
+
+        ((!gossipsub.prune)
+         (when (memq @source D-in)
+           (set! D-in (remq @source D-in))))
+
+        (! heartbeat (heartbeat!)))
+    (loop))
+#+END_SRC
+
+** Heartbeat
+
+#+BEGIN_SRC gerbil
+  (def (heartbeat!)
+    (def d-in (length D-in))
+    (def d-out (length D-out))
+
+    ;; overlay management
+    (when (< d-in N-in-low)
+      ;; we need some inbound links, send LINK to some peers
+      (let* ((i-need (- N-in d-in))
+             (candidates (filter (lambda (peer) (not (memq peer D-in)))
+                                 peers))
+             (candidates (shuffle candidates))
+             (candidates (if (> (length candidates) i-need)
+                           (take candidates i-need)
+                           candidates)))
+        (for (peer candidates)
+          (send! (!!gossipsub.link peer)))))
+
+    (when (> d-in N-in-high)
+      ;; we have too many inbound links, send UNLINK to some peers
+      (let* ((to-drop (- d-in N-in))
+             (candidates (shuffle D-in))
+             (candidates (take candidates to-drop)))
+        (for (peer candidates)
+          (send! (!!gossipsub.unlink peer)))))
+
+    (when (< d-out N-out-low)
+      ;; we have too few outbound links, add some peers and send GRAFT
+      (let* ((i-need (- N-out d-out))
+             (candidates (filter (lambda (peer) (not (memq peer D-out)))
+                                 peers))
+             (candidates (shuffle candidates))
+             (candidates (if (> (length candidates) i-need)
+                           (take candidates i-need)
+                           candidates)))
+        (set! D-out (foldl cons D-out candidates))
+        (for (peer candidates)
+          (send! (!!gossipsub.graft peer)))))
+
+    (when (> d-out N-out-high)
+      ;; we have too many outbound links, drop some peers and send PRUNE
+      (let* ((to-drop (- d-out N-out))
+             (candidates (shuffle D-out))
+             (candidates (take candidates to-drop)))
+        (for (peer candidates)
+          (set! D-out (remq peer D-out))
+          (send! (!!gossipsub.prune peer)))))
+
+    ;; message history management
+    (set! history (cons window history))
+    (set! window [])
+    (when (> (length history) history-length)
+      (let (ids (last history))
+        (set! history
+          (drop-right history 1))
+        (for (id ids)
+          (hash-remove! messages id))))
+
+    ;; gossip about messages in our history (if any)
+    (let (ids (foldl (lambda (window r) (foldl cons r window))
+                     []
+                     (if (> (length history) history-gossip)
+                       (take history history-gossip)
+                       history)))
+      (unless (null? ids)
+        (let* ((peers (shuffle peers))
+               (peers (if (> (length peers) N-out)
+                        (take peers N-out)
+                        peers)))
+          (for (peer peers)
+            (send! (!!gossipsub.ihave peer ids))))))
+
+    (set! heartbeat (make-timeout 1)))
+#+END_SRC
+
+** Initialization
+
+#+BEGIN_SRC gerbil
+  (def (connect new-peers)
+    (let (new-peers (filter (lambda (peer) (not (memq peer peers)))
+                            new-peers))
+      (for (peer new-peers)
+        (send! (!!pubsub.connect peer)))
+      (set! peers
+        (foldl cons peers new-peers))))
+
+  (connect initial-peers)
+  (loop)
+#+END_SRC
+
+
 * Simulation
 
 The simulator constructs a network of ~N~ nodes, and randomly connects
