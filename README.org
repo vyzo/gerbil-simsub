@@ -16,7 +16,7 @@ Gerbil package manager:
 $ gxpkg install github.com/vyzo/gerbil-simsub
 #+END_EXAMPLE
 
-* The ~gossipsub~ Protocol
+* The gossipsub Protocol
 
 The gossipsub router is implemented as an /actor/ in [[simsub/gossip.ss]].
 
