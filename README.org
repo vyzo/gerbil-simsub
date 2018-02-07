@@ -56,15 +56,15 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
 ** Overlay Parameters
 
 #+BEGIN_SRC gerbil
-(def N-in 6)            ; target inbound degree
-(def N-in-low 4)        ; low water mark for inbound degree
-(def N-in-high 9)       ; high water mark for inbound degree
-(def N-out 6)           ; target outbound degree
-(def N-out-low 4)       ; low water mark for outbound degree
-(def N-out-high 12)     ; high water mark for outbound degree
+(def N-in 6)             ; target inbound degree
+(def N-in-low 4)         ; low water mark for inbound degree
+(def N-in-high 9)        ; high water mark for inbound degree
+(def N-out 6)            ; target outbound degree
+(def N-out-low 4)        ; low water mark for outbound degree
+(def N-out-high 12)      ; high water mark for outbound degree
 
-(def history-gossip 3)  ; length of gossip history
-(def history-length 120 ; length of total message history
+(def history-gossip 3)   ; length of gossip history
+(def history-length 120) ; length of total message history
 #+END_SRC
 
 ** Actor State
