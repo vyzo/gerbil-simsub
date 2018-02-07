@@ -4,8 +4,8 @@ This is a pubsub protocol, dubbed ~gossipsub~, aka ~meshsub/1.0.0~.
 The basic idea is to start from a connected network with an arbitrary
 degree and reduce it to a mesh with a specific degree. Messages are
 forwarded through the reduced mesh. The mesh is augmented by /gossip/
-about forwarded messages, which is regularly flooded to known peers
-with a heartbeat.
+about forwarded messages, which is regularly forwarded to a random subset
+of known peers with a heartbeat.
 
 * Installation
 
@@ -36,13 +36,13 @@ messages: 10
 fanout: 5
 publish: 50
 deliver: 1000
-!!gossipsub.prune: 247
-!!pubsub.publish: 6852
-!!gossipsub.link: 527
-!!gossipsub.iwant: 191
-!!gossipsub.ihave: 18219
-!!gossipsub.graft: 943
-!!gossipsub.unlink: 241
+!!gossipsub.link: 378
+!!gossipsub.iwant: 16
+!!pubsub.publish: 6546
+!!gossipsub.prune: 47
+!!gossipsub.ihave: 7230
+!!gossipsub.graft: 724
+!!gossipsub.unlink: 47
 !!pubsub.connect: 1000
 
 > (simple-gossipsub-simulation trace: void messages: 100 message-delay: .1)
@@ -52,14 +52,14 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 10000
-!!gossipsub.iwant: 449
-!!pubsub.publish: 67742
-!!gossipsub.link: 511
-!!gossipsub.ihave: 21530
-!!gossipsub.graft: 921
-!!gossipsub.unlink: 189
+!!gossipsub.link: 380
+!!gossipsub.prune: 71
+!!pubsub.publish: 64306
+!!gossipsub.ihave: 7806
+!!gossipsub.unlink: 71
+!!gossipsub.graft: 748
+!!gossipsub.iwant: 179
 !!pubsub.connect: 1000
-!!gossipsub.prune: 219
 
 > (simple-gossipsub-simulation trace: void messages: 1000 message-delay: .01)
 === simulation summary ===
@@ -68,13 +68,13 @@ messages: 1000
 fanout: 5
 publish: 5000
 deliver: 100000
-!!gossipsub.prune: 349
-!!pubsub.publish: 645840
-!!gossipsub.link: 584
-!!gossipsub.iwant: 4108
-!!gossipsub.ihave: 41800
-!!gossipsub.graft: 1016
-!!gossipsub.unlink: 309
+!!gossipsub.link: 365
+!!gossipsub.iwant: 1288
+!!pubsub.publish: 668626
+!!gossipsub.prune: 50
+!!gossipsub.ihave: 14436
+!!gossipsub.graft: 752
+!!gossipsub.unlink: 50
 !!pubsub.connect: 1000
 
 #+END_EXAMPLE
