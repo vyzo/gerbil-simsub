@@ -291,3 +291,7 @@ If you want to see a trace of the developing simulation,
 then omit the ~trace: void~ argument to the simulation invocation.
 The default ~trace:~ will be ~displayln~, which will print out the simulation
 in the current output port.
+
+* License
+
+MIT; © 2018 vyzo
