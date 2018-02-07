@@ -28,15 +28,15 @@
   (prune))
 
 ;; overlay parameters
-(def N-in 6)
-(def N-in-low 4)
-(def N-in-high 9)
-(def N-out 6)
-(def N-out-low 4)
-(def N-out-high 12)
+(def N-in 6)                     ; target inbound degree
+(def N-in-low 4)                 ; low water mark for inbound degree
+(def N-in-high 9)                ; high water mark for inbound degree
+(def N-out 6)                    ; target outbound degree
+(def N-out-low 4)                ; low water mark for outbound degree
+(def N-out-high 12)              ; high water mark for outbound degree
 
-(def history-gossip 3)
-(def history-length 30)
+(def history-gossip 3)           ; length of gossip history
+(def history-length 30)          ; length of total message history
 
 ;; receive: lambda (msg-id msg-data)
 ;; initial-peers: list of peers to connect
@@ -44,10 +44,11 @@
   (def messages (make-hash-table-eqv))  ; message-id -> data
   (def window [])                       ; [message-id ...]
   (def history [])                      ; [window ...]
-  (def peers [])
-  (def D-in [])
-  (def D-out [])
-  (def heartbeat (make-timeout (1+ (random-real))))
+  (def peers [])                        ; connected peers
+  (def D-in [])                         ; inbound peers in the mesh
+  (def D-out [])                        ; outbound peer in the mesh
+  (def heartbeat                        ; next heartbeat time
+    (make-timeout (1+ (random-real))))
 
   (def (connect new-peers)
     (let (new-peers (filter (lambda (peer) (not (memq peer peers)))
