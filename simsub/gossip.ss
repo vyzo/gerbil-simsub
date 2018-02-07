@@ -12,8 +12,6 @@
         :vyzo/simsub/env)
 (export #t)
 
-(declare (fixnum))
-
 (defproto pubsub
   event:
   (connect)
@@ -49,7 +47,7 @@
   (def peers [])
   (def D-in [])
   (def D-out [])
-  (def heartbeat (make-timeout 1))
+  (def heartbeat (make-timeout (1+ (random-real))))
 
   (def (connect new-peers)
     (let (new-peers (filter (lambda (peer) (not (memq peer peers)))
