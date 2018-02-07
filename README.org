@@ -64,7 +64,7 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
 (def N-out-high 12)     ; high water mark for outbound degree
 
 (def history-gossip 3)  ; length of gossip history
-(def history-length 30) ; length of total message history
+(def history-length 120 ; length of total message history
 #+END_SRC
 
 ** Actor State

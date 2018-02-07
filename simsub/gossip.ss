@@ -36,7 +36,7 @@
 (def N-out-high 12)              ; high water mark for outbound degree
 
 (def history-gossip 3)           ; length of gossip history
-(def history-length 30)          ; length of total message history
+(def history-length 120)         ; length of total message history
 
 ;; receive: lambda (msg-id msg-data)
 ;; initial-peers: list of peers to connect
