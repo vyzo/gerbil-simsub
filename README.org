@@ -9,7 +9,7 @@ of known peers with a heartbeat.
 
 * Installation
 
-The code is written in Gerbil, and you can install it through the
+The code is written in [[https://github.com/vyzo/gerbil][Gerbil]], and you can install it through the
 Gerbil package manager:
 
 #+BEGIN_EXAMPLE
