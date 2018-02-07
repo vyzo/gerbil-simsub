@@ -35,8 +35,8 @@
 (def N-out-low 4)
 (def N-out-high 12)
 
-(def history-gossip 1)
-(def history-length 60)
+(def history-gossip 3)
+(def history-length 30)
 
 ;; receive: lambda (msg-id msg-data)
 ;; initial-peers: list of peers to connect
@@ -121,8 +121,12 @@
                        (take history history-gossip)
                        history)))
       (unless (null? ids)
-        (for (peer peers)
-          (send! (!!gossipsub.ihave peer ids)))))
+        (let* ((peers (shuffle peers))
+               (peers (if (> (length peers) N-out)
+                        (take peers N-out)
+                        peers)))
+          (for (peer peers)
+            (send! (!!gossipsub.ihave peer ids))))))
 
     (set! heartbeat (make-timeout 1)))
 
