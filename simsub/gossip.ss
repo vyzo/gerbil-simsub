@@ -28,15 +28,12 @@
   (prune))
 
 ;; overlay parameters
-(def N-in 6)                     ; target inbound degree
-(def N-in-low 4)                 ; low water mark for inbound degree
-(def N-in-high 9)                ; high water mark for inbound degree
-(def N-out 6)                    ; target outbound degree
-(def N-out-low 4)                ; low water mark for outbound degree
-(def N-out-high 12)              ; high water mark for outbound degree
+(def N 6)                            ; target mesh degree
+(def N-low 4)                        ; low water mark for mesh degree
+(def N-high 12)                      ; high water mark for mesh degree
 
-(def history-gossip 3)           ; length of gossip history
-(def history-length 120)         ; length of total message history
+(def history-gossip 3)               ; length of gossip history
+(def history-length 120)             ; length of total message history
 
 ;; receive: lambda (msg-id msg-data)
 ;; initial-peers: list of peers to connect
@@ -45,8 +42,7 @@
   (def window [])                       ; [message-id ...]
   (def history [])                      ; [window ...]
   (def peers [])                        ; connected peers
-  (def D-in [])                         ; inbound peers in the mesh
-  (def D-out [])                        ; outbound peer in the mesh
+  (def D [])                            ; mesh peers
   (def heartbeat                        ; next heartbeat time
     (make-timeout (1+ (random-real))))
 
@@ -59,14 +55,13 @@
         (foldl cons peers new-peers))))
 
   (def (heartbeat!)
-    (def d-in (length D-in))
-    (def d-out (length D-out))
+    (def d (length D))
 
     ;; overlay management
-    (when (< d-in N-in-low)
-      ;; we need some inbound links, send LINK to some peers
-      (let* ((i-need (- N-in d-in))
-             (candidates (filter (lambda (peer) (not (memq peer D-in)))
+    (when (< d N-low)
+      ;; we need some links, send LINK to some peers
+      (let* ((i-need (- N d))
+             (candidates (filter (lambda (peer) (not (memq peer D)))
                                  peers))
              (candidates (shuffle candidates))
              (candidates (if (> (length candidates) i-need)
@@ -75,35 +70,13 @@
         (for (peer candidates)
           (send! (!!gossipsub.link peer)))))
 
-    (when (> d-in N-in-high)
-      ;; we have too many inbound links, send UNLINK to some peers
-      (let* ((to-drop (- d-in N-in))
-             (candidates (shuffle D-in))
+    (when (> d N-high)
+      ;; we have too many links, send UNLINK to some peers
+      (let* ((to-drop (- d N))
+             (candidates (shuffle D))
              (candidates (take candidates to-drop)))
         (for (peer candidates)
           (send! (!!gossipsub.unlink peer)))))
-
-    (when (< d-out N-out-low)
-      ;; we have too few outbound links, add some peers and send GRAFT
-      (let* ((i-need (- N-out d-out))
-             (candidates (filter (lambda (peer) (not (memq peer D-out)))
-                                 peers))
-             (candidates (shuffle candidates))
-             (candidates (if (> (length candidates) i-need)
-                           (take candidates i-need)
-                           candidates)))
-        (set! D-out (foldl cons D-out candidates))
-        (for (peer candidates)
-          (send! (!!gossipsub.graft peer)))))
-
-    (when (> d-out N-out-high)
-      ;; we have too many outbound links, drop some peers and send PRUNE
-      (let* ((to-drop (- d-out N-out))
-             (candidates (shuffle D-out))
-             (candidates (take candidates to-drop)))
-        (for (peer candidates)
-          (set! D-out (remq peer D-out))
-          (send! (!!gossipsub.prune peer)))))
 
     ;; message history management
     (set! history (cons window history))
@@ -123,8 +96,8 @@
                        history)))
       (unless (null? ids)
         (let* ((peers (shuffle peers))
-               (peers (if (> (length peers) N-out)
-                        (take peers N-out)
+               (peers (if (> (length peers) N)
+                        (take peers N)
                         peers)))
           (for (peer peers)
             (send! (!!gossipsub.ihave peer ids))))))
@@ -143,7 +116,7 @@
            ;; deliver
            (receive id msg)
            ;; and forward
-           (for (peer (remq @source D-out))
+           (for (peer (remq @source D))
              (send! (!!pubsub.publish peer id msg)))))
 
         ((!gossipsub.ihave ids)
@@ -158,22 +131,22 @@
              (send! (!!pubsub.publish @source id msg)))))
 
         ((!gossipsub.link)
-         (unless (memq @source D-out)
-           (set! D-out (cons @source D-out))
+         (unless (memq @source D)
+           (set! D (cons @source D))
            (send! (!!gossipsub.graft @source))))
 
         ((!gossipsub.unlink)
-         (when (memq @source D-out)
-           (set! D-out (remq @source D-out))
+         (when (memq @source D)
+           (set! D (remq @source D))
            (send! (!!gossipsub.prune @source))))
 
         ((!gossipsub.graft)
-         (unless (memq @source D-in)
-           (set! D-in (cons @source D-in))))
+         (unless (memq @source D)
+           (set! D (cons @source D))))
 
         ((!gossipsub.prune)
-         (when (memq @source D-in)
-           (set! D-in (remq @source D-in))))
+         (when (memq @source D)
+           (set! D (remq @source D))))
 
         (! heartbeat (heartbeat!)))
     (loop))
