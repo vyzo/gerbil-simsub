@@ -22,8 +22,6 @@
   event:
   (ihave ids)
   (iwant ids)
-  (link)
-  (unlink)
   (graft)
   (prune))
 
@@ -59,24 +57,27 @@
 
     ;; overlay management
     (when (< d N-low)
-      ;; we need some links, send LINK to some peers
+      ;; we need some links, add some peers and send GRAFT
       (let* ((i-need (- N d))
              (candidates (filter (lambda (peer) (not (memq peer D)))
                                  peers))
              (candidates (shuffle candidates))
-             (candidates (if (> (length candidates) i-need)
-                           (take candidates i-need)
-                           candidates)))
-        (for (peer candidates)
-          (send! (!!gossipsub.link peer)))))
+             (new-peers (if (> (length candidates) i-need)
+                          (take candidates i-need)
+                          candidates)))
+        (for (peer new-peers)
+          (send! (!!gossipsub.graft peer)))
+        (set! D (append D new-peers))))
 
     (when (> d N-high)
-      ;; we have too many links, send UNLINK to some peers
+      ;; we have too many links, drop some peers and send PRUNE
       (let* ((to-drop (- d N))
              (candidates (shuffle D))
-             (candidates (take candidates to-drop)))
-        (for (peer candidates)
-          (send! (!!gossipsub.unlink peer)))))
+             (pruned-peers (take candidates to-drop)))
+        (for (peer pruned-peers)
+          (send! (!!gossipsub.prune peer)))
+        (set! D (filter (lambda (peer) (not (memq peer pruned-peers)))
+                        D))))
 
     ;; message history management
     (set! history (cons window history))
@@ -129,16 +130,6 @@
          (for (id ids)
            (alet (msg (hash-get messages id))
              (send! (!!pubsub.publish @source id msg)))))
-
-        ((!gossipsub.link)
-         (unless (memq @source D)
-           (set! D (cons @source D))
-           (send! (!!gossipsub.graft @source))))
-
-        ((!gossipsub.unlink)
-         (when (memq @source D)
-           (set! D (remq @source D))
-           (send! (!!gossipsub.prune @source))))
 
         ((!gossipsub.graft)
          (unless (memq @source D)
