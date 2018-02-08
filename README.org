@@ -46,7 +46,8 @@ The ~gossipsub~ protocol augments the baseline protocol with 4 control messages:
 + ~IHAVE~ is the gossip message, which specifies recent messages ids in the peer's
   history.
 + ~IWANT~ is used to ask for specific messages by id.
-+ ~GRAFT~ is used to notify a peer that a mesh link has been grafted.
++ ~GRAFT~ is used to notify a peer that a mesh link has been grafted; the link
+  is symmetric with messages directly forwarded to/from the peer.
 + ~PRUNE~ is used to notify a peer that a mesh link has been pruned or to reject
   a ~GRAFT~.
 
