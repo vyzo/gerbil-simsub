@@ -56,15 +56,12 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
 ** Overlay Parameters
 
 #+BEGIN_SRC gerbil
-(def N-in 6)             ; target inbound degree
-(def N-in-low 4)         ; low water mark for inbound degree
-(def N-in-high 9)        ; high water mark for inbound degree
-(def N-out 6)            ; target outbound degree
-(def N-out-low 4)        ; low water mark for outbound degree
-(def N-out-high 12)      ; high water mark for outbound degree
+(def N 6)                            ; target mesh degree
+(def N-low 4)                        ; low water mark for mesh degree
+(def N-high 12)                      ; high water mark for mesh degree
 
-(def history-gossip 3)   ; length of gossip history
-(def history-length 120) ; length of total message history
+(def history-gossip 3)               ; length of gossip history
+(def history-length 120)             ; length of total message history
 #+END_SRC
 
 ** Actor State
@@ -74,8 +71,7 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
   (def window [])                       ; messages in current window: [message-id ...]
   (def history [])                      ; message history: [window ...]
   (def peers [])                        ; connected peers
-  (def D-in [])                         ; inbound peers in the mesh
-  (def D-out [])                        ; outbound peer in the mesh
+  (def D [])                            ; direct peers in the mesh
   (def heartbeat                        ; next heartbeat time
     (make-timeout (1+ (random-real))))
 #+END_SRC
@@ -95,7 +91,7 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
            ;; deliver
            (receive id msg)
            ;; and forward
-           (for (peer (remq @source D-out))
+           (for (peer (remq @source D))
              (send! (!!pubsub.publish peer id msg)))))
 
         ((!gossipsub.ihave ids)
@@ -110,22 +106,22 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
              (send! (!!pubsub.publish @source id msg)))))
 
         ((!gossipsub.link)
-         (unless (memq @source D-out)
-           (set! D-out (cons @source D-out))
+         (unless (memq @source D)
+           (set! D (cons @source D))
            (send! (!!gossipsub.graft @source))))
 
         ((!gossipsub.unlink)
-         (when (memq @source D-out)
-           (set! D-out (remq @source D-out))
+         (when (memq @source D)
+           (set! D (remq @source D))
            (send! (!!gossipsub.prune @source))))
 
         ((!gossipsub.graft)
-         (unless (memq @source D-in)
-           (set! D-in (cons @source D-in))))
+         (unless (memq @source D)
+           (set! D (cons @source D))))
 
         ((!gossipsub.prune)
-         (when (memq @source D-in)
-           (set! D-in (remq @source D-in))))
+         (when (memq @source D)
+           (set! D (remq @source D))))
 
         (! heartbeat (heartbeat!)))
     (loop))
@@ -135,14 +131,13 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
 
 #+BEGIN_SRC gerbil
   (def (heartbeat!)
-    (def d-in (length D-in))
-    (def d-out (length D-out))
+    (def d (length D))
 
     ;; overlay management
-    (when (< d-in N-in-low)
-      ;; we need some inbound links, send LINK to some peers
-      (let* ((i-need (- N-in d-in))
-             (candidates (filter (lambda (peer) (not (memq peer D-in)))
+    (when (< d N-low)
+      ;; we need some links, send LINK to some peers
+      (let* ((i-need (- N d))
+             (candidates (filter (lambda (peer) (not (memq peer D)))
                                  peers))
              (candidates (shuffle candidates))
              (candidates (if (> (length candidates) i-need)
@@ -151,35 +146,13 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
         (for (peer candidates)
           (send! (!!gossipsub.link peer)))))
 
-    (when (> d-in N-in-high)
-      ;; we have too many inbound links, send UNLINK to some peers
-      (let* ((to-drop (- d-in N-in))
-             (candidates (shuffle D-in))
+    (when (> d N-high)
+      ;; we have too many links, send UNLINK to some peers
+      (let* ((to-drop (- d N))
+             (candidates (shuffle D))
              (candidates (take candidates to-drop)))
         (for (peer candidates)
           (send! (!!gossipsub.unlink peer)))))
-
-    (when (< d-out N-out-low)
-      ;; we have too few outbound links, add some peers and send GRAFT
-      (let* ((i-need (- N-out d-out))
-             (candidates (filter (lambda (peer) (not (memq peer D-out)))
-                                 peers))
-             (candidates (shuffle candidates))
-             (candidates (if (> (length candidates) i-need)
-                           (take candidates i-need)
-                           candidates)))
-        (set! D-out (foldl cons D-out candidates))
-        (for (peer candidates)
-          (send! (!!gossipsub.graft peer)))))
-
-    (when (> d-out N-out-high)
-      ;; we have too many outbound links, drop some peers and send PRUNE
-      (let* ((to-drop (- d-out N-out))
-             (candidates (shuffle D-out))
-             (candidates (take candidates to-drop)))
-        (for (peer candidates)
-          (set! D-out (remq peer D-out))
-          (send! (!!gossipsub.prune peer)))))
 
     ;; message history management
     (set! history (cons window history))
@@ -199,8 +172,8 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
                        history)))
       (unless (null? ids)
         (let* ((peers (shuffle peers))
-               (peers (if (> (length peers) N-out)
-                        (take peers N-out)
+               (peers (if (> (length peers) N)
+                        (take peers N)
                         peers)))
           (for (peer peers)
             (send! (!!gossipsub.ihave peer ids))))))
@@ -244,14 +217,12 @@ messages: 10
 fanout: 5
 publish: 50
 deliver: 1000
-!!gossipsub.link: 378
-!!gossipsub.iwant: 16
-!!pubsub.publish: 6546
-!!gossipsub.prune: 47
-!!gossipsub.ihave: 7230
-!!gossipsub.graft: 724
-!!gossipsub.unlink: 47
+!!gossipsub.ihave: 7218
+!!gossipsub.link: 364
+!!gossipsub.graft: 364
 !!pubsub.connect: 1000
+!!gossipsub.iwant: 3
+!!pubsub.publish: 6281
 
 > (simple-gossipsub-simulation trace: void messages: 100 message-delay: .1)
 === simulation summary ===
@@ -260,14 +231,12 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 10000
-!!gossipsub.link: 380
-!!gossipsub.prune: 71
-!!pubsub.publish: 64306
-!!gossipsub.ihave: 7806
-!!gossipsub.unlink: 71
-!!gossipsub.graft: 748
-!!gossipsub.iwant: 179
+!!gossipsub.ihave: 7812
+!!gossipsub.link: 374
+!!gossipsub.graft: 374
 !!pubsub.connect: 1000
+!!gossipsub.iwant: 163
+!!pubsub.publish: 65328
 
 > (simple-gossipsub-simulation trace: void messages: 1000 message-delay: .01)
 === simulation summary ===
@@ -276,14 +245,12 @@ messages: 1000
 fanout: 5
 publish: 5000
 deliver: 100000
-!!gossipsub.link: 365
-!!gossipsub.iwant: 1288
-!!pubsub.publish: 668626
-!!gossipsub.prune: 50
-!!gossipsub.ihave: 14436
-!!gossipsub.graft: 752
-!!gossipsub.unlink: 50
+!!gossipsub.ihave: 14196
+!!gossipsub.link: 366
+!!gossipsub.graft: 366
 !!pubsub.connect: 1000
+!!gossipsub.iwant: 1219
+!!pubsub.publish: 627418
 
 #+END_EXAMPLE
 
