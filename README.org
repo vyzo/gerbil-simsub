@@ -39,17 +39,34 @@ The protocol is defined in two layers: basic pubsub, and gossipsub:
 #+END_SRC
 
 The baseline ~pubsub~ protocol specifies 2 messages:
-+ ~CONNECT~ which establishes a symmetric connection to the peer.
-+ ~PUBLISH~ which forwards a message to the peer.
+- ~CONNECT~ which establishes a symmetric connection to the peer.
+- ~PUBLISH~ which forwards a message to the peer.
 
-The ~gossipsub~ protocol augments the baseline protocol with 4 control messages:
-+ ~IHAVE~ is the gossip message, which specifies recent messages ids in the peer's
+The baseline protocol provides just the primitives to connect the
+overlay with ~CONNECT~ and forward messages to peers with ~PUBLISH~.
+A basic implementation of ~pubsub~, aka ~floodsub~, utilizes flooding:
+upon receiving a published message, the peer forwards it to all known
+peers except the origin.
+
+The ~gossipsub~ protocol layers on top and augments the baseline protocol with 4
+ control messages:
+- ~IHAVE~ is the gossip message, which specifies recent messages ids in the peer's
   history.
-+ ~IWANT~ is used to ask for specific messages by id.
-+ ~GRAFT~ is used to notify a peer that a mesh link has been grafted; the link
-  is symmetric with messages directly forwarded to/from the peer.
-+ ~PRUNE~ is used to notify a peer that a mesh link has been pruned or to reject
+- ~IWANT~ is used to ask for specific messages by id.
+- ~GRAFT~ is used to notify a peer that a mesh link has been grafted.
+- ~PRUNE~ is used to notify a peer that a mesh link has been pruned or to reject
   a ~GRAFT~.
+
+In contrast to ~floodsub~, ~gossipsub~ reduces the publish
+amplification by routing only through mesh peers. The ~gossipsub~
+router maintains the mesh by using ~GRAFT~ and ~PRUNE~ messages, which
+effect symmetric links. The mesh is augmented by gossip messages,
+~IHAVE~ and ~IWANT~, which allows the overlay to overcome connectivity
+pathologies and jump hops opportunistically. More advanced ~gossipsub~
+routers can utilize gossip propagation to optimize the overlay for
+certain configurations -- e.g. an epidemic broadcast tree router can
+~GRAFT~ on fresh gossip and ~PRUNE~ on late messages in order to
+optimize for single source transmission.
 
 ** Overlay Parameters
 
