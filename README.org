@@ -197,7 +197,7 @@ The simulation [[simsub/scripts.ss][script]] sends a number ~M~ of messages, by 
 peers and publishing to them. Each successive message is sent after some delay
 ~M-delay~.
 
-Here are some example simulations with 100 nodes:
+Here are some example simulations with 100 and 1000 nodes:
 
 #+BEGIN_EXAMPLE
 $ gxi
