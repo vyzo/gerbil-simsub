@@ -75,6 +75,10 @@ The ~gossipsub~ protocol augments the baseline protocol with 4 control messages:
 
 ** Reaction Loop
 
+The reaction loop implements the main logic loop of the actor. The actor
+receives new messages and reacts accordingly, and dispatches the
+heartbeat procedure when the timeout is reached.
+
 #+BEGIN_SRC gerbil
   (def (loop)
     (<- ((!pubsub.connect)
@@ -119,6 +123,18 @@ The ~gossipsub~ protocol augments the baseline protocol with 4 control messages:
 #+END_SRC
 
 ** Heartbeat
+
+The heartbeat is responsible for actor state management and runs once a second:
+- when the mesh degree of the peer is less than the low water mark,
+  it selects some random known peers, adds them to the direct
+  peer list, and emits ~GRAFT~ messages to notify them.
+- when the mesh degree of the peer is more than te high water mark,
+  it selects some random mesh peers, drops them from the direct
+  peer list, and emits ~PRUNE~ messages to notify them.
+- the history of messages is rolled by 1, and if it exceeds
+  ~history-length~, the earliest seen messages are forgotten.
+- The message ids of messages seen in the last ~history-gossip~ windows
+  are forwarded to ~N~ random peers with an ~IHAVE~ gossip message.
 
 #+BEGIN_SRC gerbil
   (def (heartbeat!)
