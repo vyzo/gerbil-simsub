@@ -15,7 +15,7 @@
                                   fanout: (fanout 5)
                                   messages: (messages 10)
                                   message-delay: (message-delay 1)
-                                  connect-delay: (connect-delay 3)
+                                  connect-delay: (connect-delay 5)
                                   wait: (wait 10)
                                   trace: (trace displayln)
                                   transcript: (transcript void))
