@@ -34,8 +34,6 @@ The protocol is defined in two layers: basic pubsub, and gossipsub:
   event:
   (ihave ids)
   (iwant ids)
-  (link)
-  (unlink)
   (graft)
   (prune))
 #+END_SRC
@@ -44,14 +42,13 @@ The baseline ~pubsub~ protocol specifies 2 messages:
 + ~CONNECT~ which establishes a symmetric connection to the peer.
 + ~PUBLISH~ which forwards a message to the peer.
 
-The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
+The ~gossipsub~ protocol augments the baseline protocol with 4 control messages:
 + ~IHAVE~ is the gossip message, which specifies recent messages ids in the peer's
   history.
 + ~IWANT~ is used to ask for specific messages by id.
-+ ~LINK~ is used to request grafting a mesh link.
-+ ~UNLINK~ is used to request pruning of a mesh link.
 + ~GRAFT~ is used to notify a peer that a mesh link has been grafted.
-+ ~PRUNE~ is used to notify a peer that a mesh link has been pruned.
++ ~PRUNE~ is used to notify a peer that a mesh link has been pruned or to reject
+  a ~GRAFT~.
 
 ** Overlay Parameters
 
@@ -105,16 +102,6 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
            (alet (msg (hash-get messages id))
              (send! (!!pubsub.publish @source id msg)))))
 
-        ((!gossipsub.link)
-         (unless (memq @source D)
-           (set! D (cons @source D))
-           (send! (!!gossipsub.graft @source))))
-
-        ((!gossipsub.unlink)
-         (when (memq @source D)
-           (set! D (remq @source D))
-           (send! (!!gossipsub.prune @source))))
-
         ((!gossipsub.graft)
          (unless (memq @source D)
            (set! D (cons @source D))))
@@ -135,24 +122,27 @@ The ~gossipsub~ protocol augments the baseline protocol with 6 control messages:
 
     ;; overlay management
     (when (< d N-low)
-      ;; we need some links, send LINK to some peers
+      ;; we need some links, add some peers and send GRAFT
       (let* ((i-need (- N d))
              (candidates (filter (lambda (peer) (not (memq peer D)))
                                  peers))
              (candidates (shuffle candidates))
-             (candidates (if (> (length candidates) i-need)
-                           (take candidates i-need)
-                           candidates)))
-        (for (peer candidates)
-          (send! (!!gossipsub.link peer)))))
+             (new-peers (if (> (length candidates) i-need)
+                          (take candidates i-need)
+                          candidates)))
+        (for (peer new-peers)
+          (send! (!!gossipsub.graft peer)))
+        (set! D (append D new-peers))))
 
     (when (> d N-high)
-      ;; we have too many links, send UNLINK to some peers
+      ;; we have too many links, drop some peers and send PRUNE
       (let* ((to-drop (- d N))
              (candidates (shuffle D))
-             (candidates (take candidates to-drop)))
-        (for (peer candidates)
-          (send! (!!gossipsub.unlink peer)))))
+             (pruned-peers (take candidates to-drop)))
+        (for (peer pruned-peers)
+          (send! (!!gossipsub.prune peer)))
+        (set! D (filter (lambda (peer) (not (memq peer pruned-peers)))
+                        D))))
 
     ;; message history management
     (set! history (cons window history))
@@ -207,6 +197,8 @@ The simulation [[simsub/scripts.ss][script]] sends a number ~M~ of messages, by 
 peers and publishing to them. Each successive message is sent after some delay
 ~M-delay~.
 
+Here are some example simulations with 100 nodes:
+
 #+BEGIN_EXAMPLE
 $ gxi
 > (import :vyzo/simsub/scripts)
@@ -217,12 +209,12 @@ messages: 10
 fanout: 5
 publish: 50
 deliver: 1000
-!!gossipsub.ihave: 7218
-!!gossipsub.link: 364
-!!gossipsub.graft: 364
+!!gossipsub.prune: 14
+!!gossipsub.ihave: 7242
+!!gossipsub.graft: 376
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 3
-!!pubsub.publish: 6281
+!!gossipsub.iwant: 13
+!!pubsub.publish: 6231
 
 > (simple-gossipsub-simulation trace: void messages: 100 message-delay: .1)
 === simulation summary ===
@@ -231,12 +223,11 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 10000
-!!gossipsub.ihave: 7812
-!!gossipsub.link: 374
-!!gossipsub.graft: 374
+!!gossipsub.ihave: 7800
+!!gossipsub.graft: 350
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 163
-!!pubsub.publish: 65328
+!!gossipsub.iwant: 149
+!!pubsub.publish: 59536
 
 > (simple-gossipsub-simulation trace: void messages: 1000 message-delay: .01)
 === simulation summary ===
@@ -245,19 +236,68 @@ messages: 1000
 fanout: 5
 publish: 5000
 deliver: 100000
-!!gossipsub.ihave: 14196
-!!gossipsub.link: 366
-!!gossipsub.graft: 366
+!!gossipsub.prune: 7
+!!gossipsub.ihave: 13638
+!!gossipsub.graft: 365
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 1219
-!!pubsub.publish: 627418
+!!gossipsub.iwant: 1192
+!!pubsub.publish: 619298
+
+> (simple-gossipsub-simulation trace: void nodes: 1000 wait: 30)
+=== simulation summary ===
+nodes: 1000
+messages: 10
+fanout: 5
+publish: 50
+deliver: 10000
+!!gossipsub.prune: 26
+!!gossipsub.ihave: 71874
+!!gossipsub.graft: 3698
+!!pubsub.connect: 10000
+!!gossipsub.iwant: 182
+!!pubsub.publish: 62691
+
+> (simple-gossipsub-simulation trace: void nodes: 1000 wait: 30 messages: 100 message-delay: .5)
+=== simulation summary ===
+nodes: 1000
+messages: 100
+fanout: 5
+publish: 500
+deliver: 100000
+!!gossipsub.ihave: 316452
+!!pubsub.connect: 10000
+!!gossipsub.prune: 23
+!!gossipsub.iwant: 1363
+!!pubsub.publish: 624108
+!!gossipsub.graft: 3679
 
 #+END_EXAMPLE
+
+Note that as you run bigger simulations, you'll need a faster computer or
+the simulator will lag. This can still be useful, as it analyzes the behaviour
+of the protocol in extreme lag conditions, where messages can take seconds to
+propagate some links.
 
 If you want to see a trace of the developing simulation,
 then omit the ~trace: void~ argument to the simulation invocation.
 The default ~trace:~ will be ~displayln~, which will print out the simulation
 in the current output port.
+
+The simulator also accepts a transcript procedure, which can save the simulation
+trace to a file when it ends. For example, the following transcript function will
+save the trace to ~/tmp/simsub.out~:
+
+#+BEGIN_EXAMPLE
+(def (transcript trace)
+  (let (trace (reverse trace))
+    (call-with-output-file "/tmp/simsub.out"
+      (lambda (port)
+        (parameterize ((current-output-port port))
+          (for-each displayln trace))))))
+
+> (simple-gossipsub-simulation trace: void transcript: transcript)
+...
+#+END_EXAMPLE
 
 * License
 
