@@ -124,7 +124,11 @@
          (let (iwant (filter (lambda (id) (not (hash-get messages id)))
                              ids))
            (unless (null? iwant)
-             (send! (!!gossipsub.iwant @source iwant)))))
+             (send! (!!gossipsub.iwant @source iwant))
+             (when (and (< (length D) N) (not (memq @source D)))
+               ;; GRAFT a new link
+               (send! (!!gossipsub.graft @source))
+               (set! D (cons @source D))))))
 
         ((!gossipsub.iwant ids)
          (for (id ids)
