@@ -117,11 +117,7 @@ heartbeat procedure when the timeout is reached.
          (let (iwant (filter (lambda (id) (not (hash-get messages id)))
                              ids))
            (unless (null? iwant)
-             (send! (!!gossipsub.iwant @source iwant))
-             (when (and (< (length D) N) (not (memq @source D)))
-               ;; GRAFT a new link
-               (send! (!!gossipsub.graft @source))
-               (set! D (cons @source D))))))
+             (send! (!!gossipsub.iwant @source iwant)))))
 
         ((!gossipsub.iwant ids)
          (for (id ids)
@@ -247,11 +243,11 @@ messages: 10
 fanout: 5
 publish: 50
 deliver: 1000
-!!gossipsub.ihave: 7224
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 18
-!!pubsub.publish: 6433
-!!gossipsub.graft: 371
+!!gossipsub.iwant: 7
+!!pubsub.publish: 6265
+!!gossipsub.graft: 364
+!!gossipsub.ihave: 7188
 
 > (simple-gossipsub-simulation trace: void messages: 100 message-delay: .1)
 === simulation summary ===
@@ -260,11 +256,11 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 10000
-!!gossipsub.ihave: 7824
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 126
-!!pubsub.publish: 64180
-!!gossipsub.graft: 376
+!!gossipsub.iwant: 130
+!!pubsub.publish: 63905
+!!gossipsub.graft: 375
+!!gossipsub.ihave: 7722
 
 > (simple-gossipsub-simulation trace: void messages: 1000 message-delay: .01)
 === simulation summary ===
@@ -273,12 +269,11 @@ messages: 1000
 fanout: 5
 publish: 5000
 deliver: 100000
-!!gossipsub.ihave: 14232
 !!pubsub.connect: 1000
-!!gossipsub.prune: 7
-!!gossipsub.iwant: 1116
-!!pubsub.publish: 660356
-!!gossipsub.graft: 389
+!!gossipsub.iwant: 1396
+!!pubsub.publish: 623728
+!!gossipsub.graft: 363
+!!gossipsub.ihave: 14124
 
 > (simple-gossipsub-simulation trace: void nodes: 1000)
 === simulation summary ===
@@ -287,12 +282,12 @@ messages: 10
 fanout: 5
 publish: 50
 deliver: 10000
-!!gossipsub.ihave: 71988
+!!gossipsub.prune: 14
+!!gossipsub.iwant: 133
+!!pubsub.publish: 62750
 !!pubsub.connect: 10000
-!!gossipsub.prune: 8
-!!gossipsub.iwant: 157
-!!pubsub.publish: 61670
-!!gossipsub.graft: 3648
+!!gossipsub.graft: 3687
+!!gossipsub.ihave: 71970
 
 > (simple-gossipsub-simulation trace: void nodes: 1000 messages: 100 message-delay: .5)
 === simulation summary ===
@@ -301,12 +296,12 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 100000
-!!gossipsub.ihave: 314394
+!!gossipsub.prune: 42
+!!gossipsub.iwant: 1245
+!!pubsub.publish: 620007
 !!pubsub.connect: 10000
-!!gossipsub.prune: 44
-!!gossipsub.iwant: 1008
-!!pubsub.publish: 628469
-!!gossipsub.graft: 3768
+!!gossipsub.graft: 3688
+!!gossipsub.ihave: 316380
 
 > (simple-gossipsub-simulation trace: void nodes: 1000 messages: 100 message-delay: .1)
 === simulation summary ===
@@ -315,12 +310,12 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 100000
-!!gossipsub.prune: 79
-!!gossipsub.iwant: 21638
-!!pubsub.publish: 664468
+!!gossipsub.prune: 35
+!!gossipsub.iwant: 22123
+!!pubsub.publish: 644174
 !!pubsub.connect: 10000
-!!gossipsub.graft: 3840
-!!gossipsub.ihave: 136746
+!!gossipsub.graft: 3659
+!!gossipsub.ihave: 134478
 
 #+END_EXAMPLE
 
