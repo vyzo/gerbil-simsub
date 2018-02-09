@@ -33,7 +33,8 @@
 (def history-gossip 3)               ; length of gossip history
 (def history-length 120)             ; length of total message history
 
-(def epidemic-graft .5)              ; probability of epidemic grafting from gossip
+(def epidemic-prune .1)              ; probability of pruning from late messages
+(def epidemic-graft .25)             ; probability of grafting from gossip
 
 ;; receive: lambda (msg-id msg-data)
 ;; initial-peers: list of peers to connect
@@ -114,7 +115,9 @@
 
         ((!pubsub.publish id msg)
          (if (hash-get messages id)     ; seen message?
-           (when (and (memq @source D) (> (length D) N))
+           (when (and (memq @source D)
+                      (> (length D) N)
+                      (< (random-real) epidemic-prune))
              ;; PRUNE link
              (send! (!!gossipsub.prune @source))
              (set! D (remq @source D)))
