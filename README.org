@@ -280,7 +280,7 @@ deliver: 100000
 !!pubsub.publish: 660356
 !!gossipsub.graft: 389
 
-> (simple-gossipsub-simulation trace: void nodes: 1000 wait: 30)
+> (simple-gossipsub-simulation trace: void nodes: 1000)
 === simulation summary ===
 nodes: 1000
 messages: 10
@@ -294,7 +294,7 @@ deliver: 10000
 !!pubsub.publish: 61670
 !!gossipsub.graft: 3648
 
-> (simple-gossipsub-simulation trace: void nodes: 1000 wait: 30 messages: 100 message-delay: .5)
+> (simple-gossipsub-simulation trace: void nodes: 1000 messages: 100 message-delay: .5)
 === simulation summary ===
 nodes: 1000
 messages: 100
@@ -307,6 +307,20 @@ deliver: 100000
 !!gossipsub.iwant: 1008
 !!pubsub.publish: 628469
 !!gossipsub.graft: 3768
+
+> (simple-gossipsub-simulation trace: void nodes: 1000 messages: 100 message-delay: .1)
+=== simulation summary ===
+nodes: 1000
+messages: 100
+fanout: 5
+publish: 500
+deliver: 100000
+!!gossipsub.prune: 79
+!!gossipsub.iwant: 21638
+!!pubsub.publish: 664468
+!!pubsub.connect: 10000
+!!gossipsub.graft: 3840
+!!gossipsub.ihave: 136746
 
 #+END_EXAMPLE
 
