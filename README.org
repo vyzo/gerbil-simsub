@@ -7,9 +7,9 @@ forwarded through the reduced mesh. The mesh is augmented by /gossip/
 about forwarded messages, which is regularly forwarded to a random subset
 of known peers with a heartbeat.
 
-* Installation
+* Reference Implementation
 
-The code is written in [[https://github.com/vyzo/gerbil][Gerbil]], and you can install it through the
+The reference code is written in [[https://github.com/vyzo/gerbil][Gerbil]], and you can install it through the
 Gerbil package manager:
 
 #+BEGIN_EXAMPLE
