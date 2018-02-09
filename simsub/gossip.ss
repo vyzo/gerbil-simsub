@@ -33,6 +33,8 @@
 (def history-gossip 3)               ; length of gossip history
 (def history-length 120)             ; length of total message history
 
+(def epidemic-graft .5)              ; probability of epidemic grafting from gossip
+
 ;; receive: lambda (msg-id msg-data)
 ;; initial-peers: list of peers to connect
 (def (gossipsub-router receive initial-peers)
@@ -111,20 +113,31 @@
            (set! peers (cons @source peers))))
 
         ((!pubsub.publish id msg)
-         (unless (hash-get messages id) ; seen?
-           (hash-put! messages id msg)
-           (set! window (cons id window))
-           ;; deliver
-           (receive id msg)
-           ;; and forward
-           (for (peer (remq @source D))
-             (send! (!!pubsub.publish peer id msg)))))
+         (if (hash-get messages id)     ; seen message?
+           (when (and (memq @source D) (> (length D) N))
+             ;; PRUNE link
+             (send! (!!gossipsub.prune @source))
+             (set! D (remq @source D)))
+           (begin
+             (hash-put! messages id msg)
+             (set! window (cons id window))
+             ;; deliver
+             (receive id msg)
+             ;; and forward
+             (for (peer (remq @source D))
+               (send! (!!pubsub.publish peer id msg))))))
 
         ((!gossipsub.ihave ids)
          (let (iwant (filter (lambda (id) (not (hash-get messages id)))
                              ids))
            (unless (null? iwant)
-             (send! (!!gossipsub.iwant @source iwant)))))
+             (send! (!!gossipsub.iwant @source iwant))
+             (when (and (not (memq @source D))
+                        (or (< (length D) N)
+                            (< (random-real) epidemic-graft)))
+               ;; GRAFT a new link
+               (send! (!!gossipsub.graft @source))
+               (set! D (cons @source D))))))
 
         ((!gossipsub.iwant ids)
          (for (id ids)
