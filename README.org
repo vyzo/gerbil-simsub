@@ -200,7 +200,8 @@ The heartbeat is responsible for actor state management and runs once a second:
                         (take peers N)
                         peers)))
           (for (peer peers)
-            (send! (!!gossipsub.ihave peer ids))))))
+            (unless (memq peer D)
+              (send! (!!gossipsub.ihave peer ids)))))))
 
     (set! heartbeat (make-timeout 1)))
 #+END_SRC
@@ -243,11 +244,12 @@ messages: 10
 fanout: 5
 publish: 50
 deliver: 1000
+!!gossipsub.graft: 380
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 7
-!!pubsub.publish: 6265
-!!gossipsub.graft: 364
-!!gossipsub.ihave: 7188
+!!gossipsub.prune: 7
+!!gossipsub.iwant: 31
+!!pubsub.publish: 6473
+!!gossipsub.ihave: 4402
 
 > (simple-gossipsub-simulation trace: void messages: 100 message-delay: .1)
 === simulation summary ===
@@ -256,11 +258,12 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 10000
+!!gossipsub.graft: 374
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 130
-!!pubsub.publish: 63905
-!!gossipsub.graft: 375
-!!gossipsub.ihave: 7722
+!!gossipsub.prune: 8
+!!gossipsub.iwant: 163
+!!pubsub.publish: 63351
+!!gossipsub.ihave: 4844
 
 > (simple-gossipsub-simulation trace: void messages: 1000 message-delay: .01)
 === simulation summary ===
@@ -269,11 +272,11 @@ messages: 1000
 fanout: 5
 publish: 5000
 deliver: 100000
+!!gossipsub.graft: 376
 !!pubsub.connect: 1000
-!!gossipsub.iwant: 1396
-!!pubsub.publish: 623728
-!!gossipsub.graft: 363
-!!gossipsub.ihave: 14124
+!!gossipsub.iwant: 1037
+!!pubsub.publish: 646973
+!!gossipsub.ihave: 8413
 
 > (simple-gossipsub-simulation trace: void nodes: 1000)
 === simulation summary ===
@@ -282,12 +285,12 @@ messages: 10
 fanout: 5
 publish: 50
 deliver: 10000
-!!gossipsub.prune: 14
-!!gossipsub.iwant: 133
-!!pubsub.publish: 62750
+!!gossipsub.graft: 3651
 !!pubsub.connect: 10000
-!!gossipsub.graft: 3687
-!!gossipsub.ihave: 71970
+!!gossipsub.prune: 15
+!!gossipsub.iwant: 155
+!!pubsub.publish: 61957
+!!gossipsub.ihave: 45456
 
 > (simple-gossipsub-simulation trace: void nodes: 1000 messages: 100 message-delay: .5)
 === simulation summary ===
@@ -296,12 +299,12 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 100000
-!!gossipsub.prune: 42
-!!gossipsub.iwant: 1245
-!!pubsub.publish: 620007
+!!gossipsub.graft: 3661
 !!pubsub.connect: 10000
-!!gossipsub.graft: 3688
-!!gossipsub.ihave: 316380
+!!gossipsub.prune: 21
+!!gossipsub.iwant: 1146
+!!pubsub.publish: 621559
+!!gossipsub.ihave: 198372
 
 > (simple-gossipsub-simulation trace: void nodes: 1000 messages: 100 message-delay: .1)
 === simulation summary ===
@@ -310,12 +313,12 @@ messages: 100
 fanout: 5
 publish: 500
 deliver: 100000
-!!gossipsub.prune: 35
-!!gossipsub.iwant: 22123
-!!pubsub.publish: 644174
+!!gossipsub.graft: 3740
 !!pubsub.connect: 10000
-!!gossipsub.graft: 3659
-!!gossipsub.ihave: 134478
+!!gossipsub.prune: 53
+!!gossipsub.iwant: 20749
+!!pubsub.publish: 653634
+!!gossipsub.ihave: 84297
 
 #+END_EXAMPLE
 
