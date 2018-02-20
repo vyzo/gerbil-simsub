@@ -101,7 +101,8 @@
                         (take peers N)
                         peers)))
           (for (peer peers)
-            (send! (!!gossipsub.ihave peer ids))))))
+            (unless (memq peer D)
+              (send! (!!gossipsub.ihave peer ids)))))))
 
     (set! heartbeat (make-timeout 1)))
 
