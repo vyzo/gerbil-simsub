@@ -142,7 +142,7 @@ The heartbeat is responsible for actor state management and runs once a second:
 - when the mesh degree of the peer is less than the low water mark,
   it selects some random known peers, adds them to the mesh
   peer list, and emits ~GRAFT~ messages to notify them.
-- when the mesh degree of the peer is more than te high water mark,
+- when the mesh degree of the peer is more than the high water mark,
   it selects some random mesh peers, drops them from the mesh
   peer list, and emits ~PRUNE~ messages to notify them.
 - the history of messages is rolled by 1, and if it exceeds
