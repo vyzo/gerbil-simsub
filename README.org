@@ -63,9 +63,10 @@ router maintains the mesh by using ~GRAFT~ and ~PRUNE~ messages, which
 effect symmetric links. The mesh is augmented by gossip messages,
 ~IHAVE~ and ~IWANT~, which allows the overlay to overcome connectivity
 pathologies and jump hops opportunistically. More advanced ~gossipsub~
-routers can utilize gossip propagation to optimize the overlay for
-certain configurations -- e.g. an epidemic broadcast tree router can
-~GRAFT~ on fresh gossip and ~PRUNE~ on late messages in order to
+routers can utilize gossip propagation to optimize the overlay for certain
+configurations -- e.g. an epidemic broadcast tree router such as in
+[[https://github.com/libp2p/specs/blob/master/pubsub/gossipsub/episub.md][Episub]]
+can ~GRAFT~ on fresh gossip and ~PRUNE~ on late messages in order to
 optimize for single source transmission.
 
 ** Overlay Parameters
