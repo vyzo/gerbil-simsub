@@ -9,21 +9,9 @@
         :std/sugar
         :std/misc/shuffle
         (only-in :std/srfi/1 take drop-right)
+        :vyzo/simsub/proto
         :vyzo/simsub/env)
 (export #t)
-
-(defproto pubsub
-  event:
-  (connect)
-  (publish id data))
-
-(defproto gossipsub
-  extend: pubsub
-  event:
-  (ihave ids)
-  (iwant ids)
-  (graft)
-  (prune))
 
 ;; overlay parameters
 (def N 6)                            ; target mesh degree
@@ -118,8 +106,9 @@
            ;; deliver
            (receive id msg)
            ;; and forward
-           (for (peer (remq @source D))
-             (send! (!!pubsub.publish peer id msg)))))
+           (for (peer D)
+             (unless (eq? @source peer)
+               (send! (!!pubsub.publish peer id msg))))))
 
         ((!gossipsub.ihave ids)
          (let (iwant (filter (lambda (id) (not (hash-get messages id)))

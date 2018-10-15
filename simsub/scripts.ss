@@ -7,19 +7,28 @@
         :std/misc/shuffle
         (only-in :std/srfi/1 take)
         :vyzo/simsub/env
+        :vyzo/simsub/proto
+        :vyzo/simsub/flood
         :vyzo/simsub/gossip
         :vyzo/simsub/simulator)
 (export #t)
 
-(def (simple-gossipsub-simulation nodes: (nodes 100)
-                                  fanout: (fanout 5)
-                                  messages: (messages 10)
-                                  message-delay: (message-delay 1)
-                                  connect-delay: (connect-delay 5)
-                                  wait: (wait 10)
-                                  trace: (trace displayln)
-                                  transcript: (transcript void)
-                                  single-source: (single-source #f))
+(def (simple-gossipsub-simulation . args)
+  (apply simple-simulation router: gossipsub-router args))
+
+(def (simple-floodsub-simulation . args)
+  (apply simple-simulation router: floodsub-router args))
+
+(def (simple-simulation nodes: (nodes 100)
+                        fanout: (fanout 5)
+                        messages: (messages 10)
+                        message-delay: (message-delay 1)
+                        connect-delay: (connect-delay 5)
+                        wait: (wait 10)
+                        trace: (trace displayln)
+                        transcript: (transcript void)
+                        single-source: (single-source #f)
+                        router: (router gossipsub-router))
   (def traces (box []))
 
   (def (my-trace evt)
@@ -67,7 +76,7 @@
 
   (let (simulator (start-simulation! script: my-script
                                      trace: my-trace
-                                     router: gossipsub-router
+                                     router: router
                                      nodes: nodes))
     (thread-join! simulator)
     (display-summary!)
