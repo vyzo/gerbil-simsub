@@ -24,6 +24,7 @@
                         messages: (messages 10)
                         message-delay: (message-delay 1)
                         connect-delay: (connect-delay 5)
+                        connect: (connect 10)
                         wait: (wait 10)
                         trace: (trace displayln)
                         transcript: (transcript void)
@@ -77,7 +78,8 @@
   (let (simulator (start-simulation! script: my-script
                                      trace: my-trace
                                      router: router
-                                     nodes: nodes))
+                                     nodes: nodes
+                                     N-connect: connect))
     (thread-join! simulator)
     (display-summary!)
     (transcript (unbox traces))))
