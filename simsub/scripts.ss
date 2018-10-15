@@ -81,3 +81,11 @@
     (thread-join! simulator)
     (display-summary!)
     (transcript (unbox traces))))
+
+(def (save-transcript-to-file file)
+  (lambda (trace)
+    (let (trace (reverse trace))
+      (call-with-output-file file
+        (lambda (port)
+          (parameterize ((current-output-port port))
+            (for-each displayln trace)))))))
