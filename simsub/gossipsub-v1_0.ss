@@ -28,7 +28,7 @@
                (gossip-peers (filter (lambda (p) (not (memq p mesh))) all-peers))
                (gossip-peers
                 (let (D-gossip (overlay/v1.0-D-gossip params))
-                  (if (> (length gossip-peers) )
+                  (if (> (length gossip-peers) D-gossip)
                     (take gossip-peers D-gossip)
                     gossip-peers))))
           (for (peer peers)
