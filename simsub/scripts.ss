@@ -8,16 +8,24 @@
         (only-in :std/srfi/1 take)
         :vyzo/simsub/env
         :vyzo/simsub/proto
-        :vyzo/simsub/flood
-        :vyzo/simsub/gossip
+        :vyzo/simsub/floodsub
+        :vyzo/simsub/gossipsub-base
+        :vyzo/simsub/gossipsub-v1_0
         :vyzo/simsub/simulator)
 (export #t)
 
-(def (simple-gossipsub-simulation . args)
-  (apply simple-simulation router: gossipsub-router args))
+(def (simple-gossipsub/v1.0-simulation params: (params #f) . args)
+  (apply simple-simulation
+    router: gossipsub/v1.0
+    params: (or params (make-overlay/v1.0))
+    args))
 
 (def (simple-floodsub-simulation . args)
-  (apply simple-simulation router: floodsub-router args))
+  (apply simple-simulation
+    router: floodsub
+    params: #f
+    args))
+
 
 (def (simple-simulation nodes: (nodes 100)
                         fanout: (fanout 5)
@@ -29,7 +37,8 @@
                         trace: (trace displayln)
                         transcript: (transcript void)
                         single-source: (single-source #f)
-                        router: (router gossipsub-router))
+                        router: router
+                        params: params)
   (def traces (box []))
 
   (def (my-trace evt)
@@ -78,6 +87,7 @@
   (let (simulator (start-simulation! script: my-script
                                      trace: my-trace
                                      router: router
+                                     params: params
                                      nodes: nodes
                                      N-connect: connect))
     (thread-join! simulator)

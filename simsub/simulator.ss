@@ -21,6 +21,7 @@
 
 (def (start-simulation! script: script
                         router: router
+                        params: params
                         trace: trace
                         nodes: nodes
                         N-connect: (N-connect 10)
@@ -28,7 +29,7 @@
                         min-latency: (min-latency .010)
                         max-latency: (max-latency .150))
   (start-logger!)
-  (spawn/group 'simulator simulator-main script nodes N-connect trace router receive
+  (spawn/group 'simulator simulator-main script nodes N-connect trace router params receive
                min-latency max-latency))
 
 (def (stop-simulation! simd)
@@ -38,7 +39,7 @@
    (finally
     (thread-group-kill! (thread-thread-group simd)))))
 
-(def (simulator-main script nodes N-connect trace router receive
+(def (simulator-main script nodes N-connect trace router params receive
                      min-latency max-latency)
   (def router-actor
     (let (thr (spawn/name 'router simulator-router min-latency max-latency))
@@ -57,7 +58,7 @@
     (parameterize ((current-protocol-trace (current-thread))
                    (current-protocol-router router-actor))
       (map (lambda (id)
-             (let (thr (spawn/name 'peer simulator-node router receive))
+             (let (thr (spawn/name 'peer simulator-node router params receive))
                (spawn/name 'monitor simulator-monitor (current-thread) thr)
                (thread-specific-set! thr id)
                thr))
@@ -165,10 +166,10 @@
   (<- ((!simulator.start peers)
        (run peers))))
 
-(def (simulator-node router receive)
+(def (simulator-node router params receive)
   (def (run peers)
     (try
-     (router receive peers)
+     (router params receive peers)
      (catch (e)
        (errorf "unhandled exception: ~a" e)
        (raise e))))

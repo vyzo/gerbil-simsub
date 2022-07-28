@@ -8,7 +8,7 @@
         :vyzo/simsub/env)
 (export #t)
 
-(def (floodsub-router receive initial-peers)
+(def (floodsub _ receive initial-peers)
   (def messages (make-hash-table-eqv))
   (def peers [])
 
