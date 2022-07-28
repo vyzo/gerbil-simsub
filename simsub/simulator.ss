@@ -4,7 +4,6 @@
 
 (import :gerbil/gambit
         :std/actor
-        :std/logger
         :std/sugar
         :std/iter
         :std/misc/threads
@@ -79,7 +78,7 @@
          (shutdown!))
         ((!simulator.join actor)
          (unless (eq? actor script-node)
-           (warning "actor exited unexpectedly ~a" actor))
+           (warnf "actor exited unexpectedly ~a" actor))
          (when (eq? actor script-node)
            (shutdown!)))
         ((!protocol.trace ts msg)
@@ -100,7 +99,7 @@
    (run)
    (catch (e)
      (unless (eq? 'shutdown e)
-       (log-error "unhandled exception" e)
+       (errorf "unhandled exception: ~a" e)
        (raise e)))))
 
 (def (simulator-router min-latency max-latency)
@@ -152,7 +151,7 @@
   (try
    (loop)
    (catch (e)
-     (log-error "unhandled exception" e)
+     (errorf "unhandled exception: ~a" e)
      (raise e))))
 
 (def (simulator-driver script)
@@ -160,7 +159,7 @@
     (try
      (script peers)
      (catch (e)
-       (log-error "unhandled exception" e)
+       (errorf "unhandled exception: ~a" e)
        (raise e))))
 
   (<- ((!simulator.start peers)
@@ -171,7 +170,7 @@
     (try
      (router receive peers)
      (catch (e)
-       (log-error "unhandled exception" e)
+       (errorf "unhandled exception: ~a" e)
        (raise e))))
 
   (<- ((!simulator.start peers)

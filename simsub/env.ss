@@ -3,8 +3,11 @@
 ;; simulation environment
 
 (import :gerbil/gambit
-        :std/actor)
-(export #t)
+        :std/actor
+        :std/logger)
+(export #t start-logger!)
+
+(deflogger simsub)
 
 (def current-protocol-trace
   (make-parameter #f))

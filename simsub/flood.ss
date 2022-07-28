@@ -3,7 +3,6 @@
 
 (import :std/actor
         :std/sugar
-        :std/logger
         :std/iter
         :vyzo/simsub/proto
         :vyzo/simsub/env)
@@ -41,4 +40,4 @@
    (connect initial-peers)
    (loop)
    (catch (e)
-     (log-error "unhandled exception" e))))
+     (errorf "unhandled exception: ~a" e))))

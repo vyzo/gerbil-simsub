@@ -4,7 +4,6 @@
 
 (import :gerbil/gambit
         :std/actor
-        :std/logger
         :std/iter
         :std/sugar
         :std/misc/shuffle
@@ -136,4 +135,4 @@
    (connect initial-peers)
    (loop)
    (catch (e)
-     (log-error "unhandled exception" e))))
+     (errorf "unhandled exception: ~a" e))))
