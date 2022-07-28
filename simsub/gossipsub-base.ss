@@ -159,17 +159,16 @@
 ;; mcache implementation
 (def (mcache-shift! mc history-length)
   (with ((mcache window history) mc)
-    (let (history-length (1- history-length))
-      (if (> (length history) history-length)
-        (let (expired (last history))
-          (set! (mcache-history mc)
-            (cons window (drop-right history 1)))
-          (set! (mcache-window mc) [])
-          expired)
-        (begin
-          (set! (mcache-history mc) (cons window history))
-          (set! (mcache-window mc) [])
-          [])))))
+    (if (= (length history) history-length)
+      (let (expired (last history))
+        (set! (mcache-history mc)
+          (cons window (drop-right history 1)))
+        (set! (mcache-window mc) [])
+        expired)
+      (begin
+        (set! (mcache-history mc) (cons window history))
+        (set! (mcache-window mc) [])
+        []))))
 
 (def (mcache-push! mc mid)
   (set! (mcache-window mc)
