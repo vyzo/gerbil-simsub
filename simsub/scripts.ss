@@ -14,18 +14,17 @@
         :vyzo/simsub/simulator)
 (export #t)
 
-(def (simple-gossipsub/v1.0-simulation params: (params #f) . args)
+(def (simple-gossipsub/v1.0-simulation #!key kws params: (params #f))
   (apply simple-simulation
     router: gossipsub/v1.0
     params: (or params (make-overlay/v1.0))
-    args))
+    (keyword-rest kws router: params:)))
 
-(def (simple-floodsub-simulation . args)
+(def (simple-floodsub-simulation #!key kws)
   (apply simple-simulation
     router: floodsub
     params: #f
-    args))
-
+    (keyword-rest kws router: params:)))
 
 (def (simple-simulation nodes: (nodes 100)
                         fanout: (fanout 5)
@@ -33,7 +32,7 @@
                         message-delay: (message-delay 1)
                         connect-delay: (connect-delay 5)
                         connect: (connect 10)
-                        wait: (wait 10)
+                        linger: (linger 10)
                         trace: (trace displayln)
                         transcript: (transcript void)
                         single-source: (single-source #f)
@@ -59,7 +58,7 @@
                 (send! (!!pubsub.publish peer i msg)))))
           (thread-sleep! message-delay)
           (lp (1+ i)))))
-    (thread-sleep! wait))
+    (thread-sleep! linger))
 
   (def (display-summary!)
     (def publish 0)

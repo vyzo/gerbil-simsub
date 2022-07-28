@@ -162,11 +162,14 @@
     (let (history-length (1- history-length))
       (if (> (length history) history-length)
         (let (expired (last history))
-          (set! history
+          (set! (mcache-history mc)
             (cons window (drop-right history 1)))
-          (set! window [])
+          (set! (mcache-window mc) [])
           expired)
-        []))))
+        (begin
+          (set! (mcache-history mc) (cons window history))
+          (set! (mcache-window mc) [])
+          [])))))
 
 (def (mcache-push! mc mid)
   (set! (mcache-window mc)
@@ -176,7 +179,6 @@
   (with ((mcache window history) mc)
     (foldl (lambda (window r) (foldl cons r window))
            []
-           (let (gossip-old (1- gossip-window))
-             (if (> (length history) gossip-old)
-               (take history gossip-old)
-               history)))))
+           (if (> (length history) gossip-window)
+             (take history gossip-window)
+             history))))

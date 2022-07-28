@@ -3,6 +3,7 @@
 ;; simulation environment
 
 (import :gerbil/gambit
+        :std/iter
         :std/actor
         :std/logger)
 (export #t start-logger!)
@@ -79,3 +80,7 @@
 (def (time< t1 t2)
   (< (time->seconds t1)
      (time->seconds t2)))
+
+(def (keyword-rest kwt . drop)
+  (for (kw drop) (hash-remove! kwt kw))
+  (hash-fold (lambda (k v r) (cons* k v r)) [] kwt))
