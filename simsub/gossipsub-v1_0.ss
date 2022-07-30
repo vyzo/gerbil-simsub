@@ -20,9 +20,12 @@
     (set! (overlay/v1.0-D-gossip self) D-gossip)
     (apply overlay:::init! self (keyword-rest kws D-gossip:))))
 
+;; gossipsub v1.0 implementation
 (defgossipsub gossipsub/v1.0
   (params peers mesh mcache)
-  (forward! void gossip! void shuffle prune! void)
+  (publish! forward! void gossip! void shuffle prune! void)
+  (def (publish! id msg)
+    (forward-message! #f id msg mesh))
   (def (forward! source id msg)
     (forward-message! source id msg mesh))
   (def (prune! peer)

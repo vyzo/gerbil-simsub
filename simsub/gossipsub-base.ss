@@ -44,14 +44,15 @@
       ;; mcache: the message cache
       (params peers mesh mcache)
       ;; hooks for protocol specific logic
-      ;; deliver!: deliver a new message, responsible for forwarding
+      ;; publish!: publish a new message from this node
+      ;; deliver!: deliver and forward a new message
       ;; duplicate!: record a duplicate message
       ;; on-heartbeat!: called on heartbeat, implementing gossip and advanced functionality
       ;; handle-message: protocol specific message handler
       ;; prune-candidates: invoked to sort mesh peers as candidates for pruning when over subscribed
       ;; prune!: implements actual pruning
       ;; pruned!: invoked when a peer has pruned us
-      (deliver! duplicate! on-heartbeat! handle-message prune-candidates prune! pruned!)
+      (publish! deliver! duplicate! on-heartbeat! handle-message prune-candidates prune! pruned!)
       ;; local-defs: local definition(s)
       local-defs ...)
    ;; receive: lambda (msg-id msg-data) -- delivers received messages
@@ -126,6 +127,14 @@
               (set! peers (cons @source peers))))
 
            ((!pubsub.publish id msg)
+            (hash-put! messages id msg)
+            (mcache-push! mcache id)
+            ;; record delivery
+            (receive id msg)
+            ;; and publish with protocol specific logic
+            (publish! id msg))
+
+           ((!pubsub.message id msg)
             (if (hash-get messages id)  ; seen?
               (duplicate! @source id)
               (begin
@@ -145,7 +154,7 @@
            ((!gossipsub.iwant ids)
             (for (id ids)
               (alet (msg (hash-get messages id))
-                (send! (!!pubsub.publish @source id msg)))))
+                (send! (!!pubsub.message @source id msg)))))
 
            ((!gossipsub.graft)
             (unless (memq @source mesh)
@@ -178,7 +187,7 @@
 (def (forward-message! source id msg mesh (exclude []))
   (for (peer mesh)
     (unless (or (eq? source peer) (memq peer exclude))
-      (send! (!!pubsub.publish peer id msg)))))
+      (send! (!!pubsub.message peer id msg)))))
 
 ;; mcache implementation
 (def (mcache-shift! mc history-length)
