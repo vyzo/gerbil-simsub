@@ -171,7 +171,7 @@
             (pruned! @source))
 
            ;; protocol specific messages
-           (msg (handle-message msg))
+           (msg (handle-message @source msg))
 
            ;; heartbeat timer
            (! heartbeat (heartbeat!)))
