@@ -26,6 +26,14 @@
            (set! peers (cons @source peers))))
 
         ((!pubsub.publish id msg)
+         (hash-put! messages id msg)
+         ;; deliver
+         (receive id msg)
+         ;; and forward
+         (for (peer peers)
+           (send! (!!pubsub.message peer id msg))))
+
+        ((!pubsub.message id msg)
          (unless (hash-get messages id) ; seen?
            (hash-put! messages id msg)
            ;; deliver
@@ -33,7 +41,7 @@
            ;; and forward
            (for (peer peers)
              (unless (eq? @source peer)
-               (send! (!!pubsub.publish peer id msg)))))))
+               (send! (!!pubsub.message peer id msg)))))))
     (loop))
 
   (try
