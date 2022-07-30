@@ -4,6 +4,8 @@
 
 (import :gerbil/gambit
         :std/iter
+        :std/format
+        :std/sort
         :std/misc/shuffle
         (only-in :std/srfi/1 take)
         :vyzo/simsub/env
@@ -61,6 +63,7 @@
     (def publish 0)
     (def deliver 0)
     (def send (make-hash-table-eq))
+    (def deliveries (make-hash-table-eqv))
 
     (for (evt (unbox traces))
       (match evt
@@ -68,8 +71,9 @@
          (hash-update! send what 1+ 0))
         (['publish . _]
          (set! publish (1+ publish)))
-        (['deliver . _]
-         (set! deliver (1+ deliver)))))
+        (['deliver ts _ _ msg]
+         (set! deliver (1+ deliver))
+         (hash-update! deliveries (car msg) (cut cons ts <>) []))))
 
     (displayln "=== simulation summary ===")
     (displayln "nodes: " nodes)
@@ -78,7 +82,10 @@
     (displayln "publish: " publish)
     (displayln "deliver: " deliver)
     (for ((values msg count) send)
-      (displayln msg ": " count)))
+      (displayln msg ": " count))
+
+    (displayln "=== delivery latency histogram ===")
+    (display-histogram deliveries))
 
   (let (simulator (start-simulation! script: my-script
                                      trace: my-trace
@@ -97,3 +104,35 @@
         (lambda (port)
           (parameterize ((current-output-port port))
             (for-each displayln trace)))))))
+
+(def (display-histogram deliveries)
+  (def buckets (vector))
+  (def samples 0)
+  (def (bucket-stars i)
+    (let* ((delta (inexact->exact (ceiling (/ samples 100))))
+           (count (vector-ref buckets i))
+           (stars (inexact->exact (floor (/ count delta)))))
+      (make-string stars #\*)))
+  (def (pad str n)
+    (let (strlen (string-length str))
+      (if (< strlen n)
+        (string-append (make-string (- n strlen) #\space) str)
+        str)))
+  (for ((values _ timestamps) deliveries)
+    (let* ((timestamps (sort timestamps <))
+           (publish (car timestamps))
+           (deliver (cdr timestamps)))
+      (for (ts deliver)
+        (set! samples (1+ samples))
+        (let* ((delta (- ts publish))
+               (bucket (inexact->exact (floor (/ delta .1))))) ; 100ms buckets
+          (unless (< bucket (vector-length buckets))
+            (let (new-buckets (make-vector (1+ bucket) 0))
+              (subvector-move! buckets 0 (vector-length buckets) new-buckets 0)
+              (set! buckets new-buckets)))
+          (vector-set! buckets bucket (1+ (vector-ref buckets bucket)))))))
+  (for (i (in-range (vector-length buckets)))
+    (printf "~a\t~a\t~a\n"
+            (pad (format "~a-~ams" (* i 100) (* (1+ i) 100)) 12)
+            (pad (format "~a" (vector-ref buckets i)) 6)
+            (bucket-stars i))))
