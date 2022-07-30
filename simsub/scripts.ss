@@ -28,7 +28,8 @@
     params: #f
     (keyword-rest kws router: params:)))
 
-(def (simple-simulation nodes: (nodes 100)
+(def (simple-simulation #!key kws
+                        nodes: (nodes 100)
                         sources: (nsources 5)
                         messages: (messages 10)
                         message-delay: (message-delay 1)
@@ -87,12 +88,20 @@
     (displayln "=== delivery latency histogram ===")
     (display-histogram deliveries))
 
-  (let (simulator (start-simulation! script: my-script
-                                     trace: my-trace
-                                     router: router
-                                     params: params
-                                     nodes: nodes
-                                     N-connect: connect))
+  (let (simulator (apply start-simulation!
+                    script: my-script
+                    trace: my-trace
+                    nodes: nodes
+                    N-connect: connect
+                    (keyword-rest kws
+                                  sources:
+                                  messages:
+                                  message-delay:
+                                  connect-delay:
+                                  connect:
+                                  linger:
+                                  trace:
+                                  transcript:)))
     (thread-join! simulator)
     (display-summary!)
     (transcript (unbox traces))))
