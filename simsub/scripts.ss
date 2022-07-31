@@ -45,6 +45,7 @@
                         linger: (linger 10)
                         trace: (trace displayln)
                         transcript: (transcript void)
+                        rng: (rng default-random-source)
                         router: router
                         params: params)
   (def traces (box []))
@@ -59,7 +60,7 @@
     (let (sources (take (shuffle peers) nsources))
       (let lp ((i 0))
         (when (< i messages)
-          (let (source (list-ref sources (random-integer nsources)))
+          (let (source (list-ref sources (random-integer nsources rng)))
             (let (msg (cons 'msg i))
               (trace-publish! i msg)
               (send! (!!pubsub.publish source i msg))))

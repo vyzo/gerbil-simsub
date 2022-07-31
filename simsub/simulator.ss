@@ -26,11 +26,12 @@
                         nodes: nodes
                         N-connect: (N-connect 10)
                         receive: (receive trace-deliver!)
+                        rng: (rng default-random-source)
                         min-latency: (min-latency .010)
                         max-latency: (max-latency .150))
   (start-logger!)
   (spawn/group 'simulator simulator-main script nodes N-connect trace router params receive
-               min-latency max-latency))
+               rng min-latency max-latency))
 
 (def (stop-simulation! simd)
   (!!simulator.shutdown simd)
@@ -40,9 +41,9 @@
     (thread-group-kill! (thread-thread-group simd)))))
 
 (def (simulator-main script nodes N-connect trace router params receive
-                     min-latency max-latency)
+                     rng min-latency max-latency)
   (def router-actor
-    (let (thr (spawn/name 'router simulator-router min-latency max-latency))
+    (let (thr (spawn/name 'router simulator-router rng min-latency max-latency))
       (spawn/name 'monitor simulator-monitor (current-thread) thr)
       thr))
 
@@ -103,7 +104,7 @@
        (errorf "unhandled exception: ~a" e)
        (raise e)))))
 
-(def (simulator-router min-latency max-latency)
+(def (simulator-router rng min-latency max-latency)
   (def send-message #f)
   (def mqueue (make-pqueue (lambda (m) (time->seconds (car m)))))
   (def latencies (make-hash-table))
@@ -115,7 +116,7 @@
         => values)
        (else
         (let ((key2 (cons dest src))
-              (dt (+ min-latency (* (random-real) (- max-latency min-latency)))))
+              (dt (+ min-latency (* (random-real rng) (- max-latency min-latency)))))
           (hash-put! latencies key1 dt)
           (hash-put! latencies key2 dt)
           dt)))))
