@@ -41,29 +41,38 @@
   (def (forward! source id msg)
     (forward-message! source id msg mesh))
   (def (prune! peer)
-    (let* ((px (overlay/v1.1-px params))
-           (peers
-            (cond
-             ((zero? px) [])
-             ((> (length peers) px)
-              (take (remq peer peers) px))
-             (else
-              (remq peer peers)))))
-      (send! (!!gossipsub.prune peer peers))))
+    (prune/px! params peer peers))
   (def (gossip!)
     (let (mids (mcache-gossip mcache (overlay-gossip-window params)))
-      (unless (null? mids)
-        (let* ((candidates (filter (lambda (p) (not (memq p mesh))) (shuffle peers)))
-               (gossip-peers
-                (for/fold (r []) (peer candidates)
-                  (if (< (random-real) (overlay/v1.1-gossip-factor params))
-                    (cons peer r)
-                    r)))
-               (gossip-peers
-                (if (< (length gossip-peers) (overlay/v1.0-D-gossip params))
-                  (let ((to-add (- (overlay/v1.0-D-gossip params) (length gossip-peers)))
-                        (candidates (filter (lambda (p) (not (memq p gossip-peers))) candidates)))
-                    (append (take candidates to-add) gossip-peers))
-                  gossip-peers)))
-          (for (peer gossip-peers)
-            (send! (!!gossipsub.ihave peer mids))))))))
+      (gossip/adaptive! params mids peers mesh))))
+
+(def (prune/px! params peer peers)
+  (let* ((px (overlay/v1.1-px params))
+         (peers
+          (cond
+           ((zero? px) [])
+           ((> (length peers) px)
+            (take (remq peer peers) px))
+           (else
+            (remq peer peers)))))
+    (send! (!!gossipsub.prune peer peers))))
+
+(def (gossip/adaptive! params mids peers mesh (choked []))
+  (unless (null? mids)
+    (let* ((candidates (filter (lambda (p) (not (memq p mesh))) (shuffle peers)))
+           (gossip-peers
+            (for/fold (r []) (peer candidates)
+              (if (< (random-real) (overlay/v1.1-gossip-factor params))
+                (cons peer r)
+                r)))
+           (gossip-peers
+            (if (< (length gossip-peers) (overlay/v1.0-D-gossip params))
+              (let* ((candidates (filter (lambda (p) (not (memq p gossip-peers))) candidates))
+                     (to-add (- (overlay/v1.0-D-gossip params) (length gossip-peers)))
+                     (to-add (min (length candidates) to-add)))
+                (append (take candidates to-add) gossip-peers))
+              gossip-peers))
+           (gossip-peers
+            (append choked gossip-peers)))
+      (for (peer gossip-peers)
+        (send! (!!gossipsub.ihave peer mids))))))
