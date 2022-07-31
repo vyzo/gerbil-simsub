@@ -17,3 +17,9 @@
   (iwant ids)
   (graft)
   (prune px))
+
+(defproto episub
+  extend: gossipsub
+  event:
+  (choke)
+  (unchoke))
