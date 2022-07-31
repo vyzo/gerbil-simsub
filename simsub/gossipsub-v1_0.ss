@@ -7,7 +7,7 @@
         (only-in :std/srfi/1 take)
         :vyzo/simsub/proto
         :vyzo/simsub/env
-        :vyzo/simsub/gossipsub-base.ss)
+        :vyzo/simsub/gossipsub-base)
 (export #t)
 
 ;; gossipsub/v1.0 overlay parameters
@@ -40,5 +40,5 @@
                   (if (> (length gossip-peers) D-gossip)
                     (take gossip-peers D-gossip)
                     gossip-peers))))
-          (for (peer peers)
+          (for (peer gossip-peers)
             (send! (!!gossipsub.ihave peer mids))))))))

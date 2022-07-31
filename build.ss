@@ -8,5 +8,6 @@
     "simsub/floodsub"
     "simsub/gossipsub-base"
     "simsub/gossipsub-v1_0"
+    "simsub/gossipsub-v1_1"
     "simsub/simulator"
     "simsub/scripts"))
