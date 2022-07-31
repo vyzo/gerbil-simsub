@@ -14,6 +14,7 @@
         :vyzo/simsub/gossipsub-base
         :vyzo/simsub/gossipsub-v1_0
         :vyzo/simsub/gossipsub-v1_1
+        :vyzo/simsub/episub
         :vyzo/simsub/simulator)
 (export #t)
 
@@ -27,6 +28,12 @@
   (apply simple-simulation
     router: gossipsub/v1.1
     params: (or params (make-overlay/v1.1))
+    (keyword-rest kws router: params:)))
+
+(def (simple-episub-simulation #!key kws params: (params #f))
+  (apply simple-simulation
+    router: gossipsub/v1.2
+    params: (or params (make-overlay/v1.2))
     (keyword-rest kws router: params:)))
 
 (def (simple-floodsub-simulation #!key kws)

@@ -44,7 +44,7 @@
            (keyword-rest kws D-choke: choke-strategy: choke-threshold: choke-frequency: choke-min-samples:))))
 
 ;; episub experimental implementation
-(defgossipsub episub
+(defgossipsub gossipsub/v1.2
   (params peers mesh mcache)
   (publish! deliver! duplicate! on-heartbeat! handle-message prune-candidates prune! pruned!)
   ;; peers we have choked
