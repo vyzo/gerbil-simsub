@@ -86,9 +86,8 @@
                               (overlay/v1.2-D-choke params)))
           ;; we only try to choke when we are over D-choke in effective mesh degree
           (when choke
-            (unless (< (- (length mesh) (length choke-in)) (overlay/v1.2-D-choke params))
-              (set! choke-in (cons choke choke-in))
-              (send! (!!episub.choke choke))))
+            (set! choke-in (cons choke choke-in))
+            (send! (!!episub.choke choke)))
           (when unchoke
             (set! choke-in (remq unchoke choke-in))
             (send! (!!episub.unchoke unchoke))))))
