@@ -109,9 +109,10 @@
   (def send-message #f)
   (def mqueue (make-pqueue (lambda (m) (time->seconds (car m)))))
   (def latencies (make-hash-table))
+  (def random-real (random-source-make-reals rng))
 
   (def (with-jitter dt)
-    (+ dt (* (random-real rng) jitter dt)))
+    (+ dt (* (random-real) jitter dt)))
 
   (def (latency src dest)
     (let (key1 (cons src dest))
@@ -120,7 +121,7 @@
         => with-jitter)
        (else
         (let ((key2 (cons dest src))
-              (dt (+ min-latency (* (random-real rng) (- max-latency min-latency)))))
+              (dt (+ min-latency (* (random-real) (- max-latency min-latency)))))
           (hash-put! latencies key1 dt)
           (hash-put! latencies key2 dt)
           (with-jitter dt))))))

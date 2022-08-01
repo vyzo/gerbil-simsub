@@ -56,6 +56,7 @@
                         router: router
                         params: params)
   (def traces (box []))
+  (def random-integer (random-source-make-integers rng))
 
   (def (my-trace evt)
     (set! (box traces)
@@ -67,7 +68,7 @@
     (let (sources (take (shuffle peers) nsources))
       (let lp ((i 0))
         (when (< i messages)
-          (let (source (list-ref sources (random-integer nsources rng)))
+          (let (source (list-ref sources (random-integer nsources)))
             (let (msg (cons 'msg i))
               (trace-publish! i msg)
               (send! (!!pubsub.publish source i msg))))
