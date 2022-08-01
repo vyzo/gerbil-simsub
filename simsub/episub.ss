@@ -19,9 +19,9 @@
 ;; D-choke: minimum acceptable mesh degree excluding choked peers
 ;; choke-strategy: the strategy to use for making choking decisions
 ;;  'order-avg:      use delivery order average
-;;  'order-median:   use delivery order median
 ;;  'latency-avg:    use delivery latency average
 ;;  'latency-median: use delivery latency median
+;;  'latency-p90:    use delivery latency 90th percentale
 ;; choke-threshold: number of heartbeats before choking is activated
 ;; choke-frequency: number of heartbeats before a new choking decision is made
 ;; choke-min-samples: minimum number of samples for considering a peer in a choking decision
