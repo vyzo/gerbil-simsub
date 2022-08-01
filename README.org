@@ -59,19 +59,22 @@ The following protocols are currently supported:
 
 * Running simulations
 
-Here is an example, running simulations using gossip v1.0 and
-gossipsub v1.1.  Note the explicit use and reset of an rng to ensure
-that the underlying topology and source selection is the same for both
-runs and that we compare apples to apples.
+Here is an example, running simulations using gossipsub v1.0 and
+gossipsub v1.1. Note the explicit use and reset of the rng state to
+ensure that the underlying topology and source selection is the same
+for both runs and that we compare apples to apples. Despite that,
+there can still be some variance between runs, because actors use the
+default rng and even if that state is reset, unfortunately there can
+be variance between runs because of the threading system and gc (the
+simulation is real-time).
 
 By default, the simulation creates a network of 100 nodes, with each
 node randomly connected to 20 other nodes.  There are 5 (randomly
 selected) sources, which send a total of 10 messages, 1 per second.
-All this parameters can be changed for longer and bigger simulations,
+All these parameters can be changed for longer and bigger simulations,
 using keyword arguments.
 
 #+BEGIN_EXAMPLE
-Gerbil 0.17.0-51-g71200538 on Gambit v4.9.3
 > (import :vyzo/simsub/scripts)
 > (def rng (make-random-source))
 > (random-source-randomize! rng)
@@ -83,17 +86,17 @@ messages: 10
 sources: 5
 publish: 10
 deliver: 1000
-!!gossipsub.prune: 15
+!!gossipsub.graft: 365
 !!pubsub.publish: 10
-!!gossipsub.ihave: 7182
-!!gossipsub.iwant: 46
+!!gossipsub.ihave: 7104
 !!pubsub.connect: 2000
-!!gossipsub.graft: 376
-!!pubsub.message: 6245
+!!gossipsub.prune: 8
+!!pubsub.message: 6142
+!!gossipsub.iwant: 28
 === delivery latency histogram ===
-     0-100ms	   160	****************
-   100-200ms	   722	************************************************************************
-   200-300ms	   108	**********
+     0-100ms	   110	***********
+   100-200ms	   730	*************************************************************************
+   200-300ms	   150	***************
 > (random-source-state-set! rng rng-state)
 > (simple-gossipsub/v1.1-simulation trace: void rng: rng)
 === simulation summary ===
@@ -102,16 +105,16 @@ messages: 10
 sources: 5
 publish: 10
 deliver: 1000
-!!gossipsub.prune: 7
+!!gossipsub.graft: 365
 !!pubsub.publish: 10
-!!gossipsub.ihave: 9423
+!!gossipsub.ihave: 9694
+!!gossipsub.prune: 7
+!!pubsub.connect: 2061
+!!pubsub.message: 6676
 !!gossipsub.iwant: 24
-!!gossipsub.graft: 362
-!!pubsub.connect: 2070
-!!pubsub.message: 6577
 === delivery latency histogram ===
-     0-100ms	   603	************************************************************
-   100-200ms	   387	**************************************
+     0-100ms	   564	********************************************************
+   100-200ms	   426	******************************************
 #+END_EXAMPLE
 
 * License
