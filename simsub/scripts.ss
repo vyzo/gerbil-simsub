@@ -65,7 +65,7 @@
 
   (def (my-script peers)
     (thread-sleep! connect-delay)
-    (let (sources (take (shuffle peers) nsources))
+    (let (sources (take (shuffle peers rng) nsources))
       (let lp ((i 0))
         (when (< i messages)
           (let (source (list-ref sources (random-integer nsources)))

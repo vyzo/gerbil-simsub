@@ -68,7 +68,7 @@
 
   (def (run)
     (for (peer peer-nodes)
-      (let* ((peers (shuffle (remq peer peer-nodes)))
+      (let* ((peers (shuffle (remq peer peer-nodes) rng))
              (peers (if (> (length peers) N-connect)
                       (take peers N-connect)
                       peers)))
