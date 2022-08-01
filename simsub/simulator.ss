@@ -28,10 +28,11 @@
                         receive: (receive trace-deliver!)
                         rng: (rng default-random-source)
                         min-latency: (min-latency .010)
-                        max-latency: (max-latency .150))
+                        max-latency: (max-latency .150)
+                        jitter: (jitter .1))
   (start-logger!)
   (spawn/group 'simulator simulator-main script nodes N-connect trace router params receive
-               rng min-latency max-latency))
+               rng min-latency max-latency jitter))
 
 (def (stop-simulation! simd)
   (!!simulator.shutdown simd)
@@ -41,9 +42,9 @@
     (thread-group-kill! (thread-thread-group simd)))))
 
 (def (simulator-main script nodes N-connect trace router params receive
-                     rng min-latency max-latency)
+                     rng min-latency max-latency jitter)
   (def router-actor
-    (let (thr (spawn/name 'router simulator-router rng min-latency max-latency))
+    (let (thr (spawn/name 'router simulator-router rng min-latency max-latency jitter))
       (spawn/name 'monitor simulator-monitor (current-thread) thr)
       thr))
 
@@ -104,22 +105,25 @@
        (errorf "unhandled exception: ~a" e)
        (raise e)))))
 
-(def (simulator-router rng min-latency max-latency)
+(def (simulator-router rng min-latency max-latency jitter)
   (def send-message #f)
   (def mqueue (make-pqueue (lambda (m) (time->seconds (car m)))))
   (def latencies (make-hash-table))
+
+  (def (with-jitter dt)
+    (+ dt (* (random-real rng) jitter dt)))
 
   (def (latency src dest)
     (let (key1 (cons src dest))
       (cond
        ((hash-get latencies key1)
-        => values)
+        => with-jitter)
        (else
         (let ((key2 (cons dest src))
               (dt (+ min-latency (* (random-real rng) (- max-latency min-latency)))))
           (hash-put! latencies key1 dt)
           (hash-put! latencies key2 dt)
-          dt)))))
+          (with-jitter dt))))))
 
   (def (push! dt msg)
     (let (timeo (make-timeout dt))
