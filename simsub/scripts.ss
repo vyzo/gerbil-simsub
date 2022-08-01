@@ -107,7 +107,6 @@
   (let (simulator (apply start-simulation!
                     script: my-script
                     trace: my-trace
-                    nodes: nodes
                     N-connect: connect
                     (keyword-rest kws
                                   sources:
