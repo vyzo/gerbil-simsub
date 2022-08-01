@@ -1,0 +1,118 @@
+* An abstract protocol simulator for the gossipsub family of protocols
+
+This package contains an abstract protocol simulator for the
+[gossipsub](https://github.com/libp2p/specs/tree/master/pubsub/gossipsub)
+family of protocols, supporting gossipsub v1.0, v1.1, and the
+experimental episub extensions (gossipsub v1.2).
+
+The simulator is written in [Gerbil](https://cons.io) using actor
+orient programming.
+
+Note: This repo originally contained the first abstract gossipsub
+implementation, before it was deployed in production. Since then,
+gossipsub has evolved significantly and is in production use in severl
+blockchains (Filecoin, ETH2, Celestia, etc...).
+
+The original README
+contained a literal presentation of the gossipsub protocol, and has
+been preserved [here](README-literate-gossipsub.org) as it is still a
+pretty good read and introduction to gossipsub.
+
+* Installation
+
+You can install simsub using gxpkg, the Gerbil package manager:
+#+BEGIN_EXAMPLE
+gxpkg install github.com/vyzo/gerbil-simsub
+#+END_EXAMPLE
+
+* The simulation framework
+
+The simulator creates a random network, using parameterized
+connectivity and link latency with jitter.  The simulator creates the
+topology and uses a user supplied script to drive the simulation.  The
+simulation is traced so that the results and behaviour of the protocol
+can be analyzed.
+
+For the simulator core, see
+[simsub/simulator.ss](simsub/simulator.ss).  The default included
+simulator driver and script script is in
+[simsub/script.ss](simsub/script.ss).  The simulator is parameterized
+using keyword arguments; see `simple-simulation` and
+`start-simulation!` for the relevant keywords.
+
+
+* Protocol Implementations
+
+Protocols are implemented as actors.
+The following protocols are currently supported:
+- floodsub as a baseline; see [simsub/floodsub.ss](simsub/floodsub.ss).
+- gossipsub v1.0, the original gossipsub protocol; see
+  [simsub/gossipsub-v1_0.ss](simsub/gossipsub-v1_0.ss).
+- gossipsub v1.1, the currently deployed protocol in production; see
+  [simsub/gossipsub-v1_1.ss](simsub/gossipsub-v1_1.ss).  Note that the
+  scoring function is not implemented here, although it should be
+  straightforward to do so if you want to study its properties using
+  the simulator framework.
+- gossipsub v1.2, aka episub. This is the next generation evolution of
+  gossipsub, currently in development. See
+  [simsub/episub.ss](simsub/episub.ss).
+
+* Running simulations
+
+Here is an example, running simulations using gossip v1.0 and
+gossipsub v1.1.  Note the explicit use and reset of an rng to ensure
+that the underlying topology and source selection is the same for both
+runs and that we compare apples to apples.
+
+By default, the simulation creates a network of 100 nodes, with each
+node randomly connected to 20 other nodes.  There are 5 (randomly
+selected) sources, which send a total of 10 messages, 1 per second.
+All this parameters can be changed for longer and bigger simulations,
+using keyword arguments.
+
+#+BEGIN_EXAMPLE
+Gerbil 0.17.0-51-g71200538 on Gambit v4.9.3
+> (import :vyzo/simsub/scripts)
+> (def rng (make-random-source))
+> (random-source-randomize! rng)
+> (def rng-state (random-source-state-ref rng))
+> (simple-gossipsub/v1.0-simulation trace: void rng: rng)
+=== simulation summary ===
+nodes: 100
+messages: 10
+sources: 5
+publish: 10
+deliver: 1000
+!!gossipsub.prune: 15
+!!pubsub.publish: 10
+!!gossipsub.ihave: 7182
+!!gossipsub.iwant: 46
+!!pubsub.connect: 2000
+!!gossipsub.graft: 376
+!!pubsub.message: 6245
+=== delivery latency histogram ===
+     0-100ms	   160	****************
+   100-200ms	   722	************************************************************************
+   200-300ms	   108	**********
+> (random-source-state-set! rng rng-state)
+> (simple-gossipsub/v1.1-simulation trace: void rng: rng)
+=== simulation summary ===
+nodes: 100
+messages: 10
+sources: 5
+publish: 10
+deliver: 1000
+!!gossipsub.prune: 7
+!!pubsub.publish: 10
+!!gossipsub.ihave: 9423
+!!gossipsub.iwant: 24
+!!gossipsub.graft: 362
+!!pubsub.connect: 2070
+!!pubsub.message: 6577
+=== delivery latency histogram ===
+     0-100ms	   603	************************************************************
+   100-200ms	   387	**************************************
+#+END_EXAMPLE
+
+* License
+MIT; © 2018-2022 vyzo
