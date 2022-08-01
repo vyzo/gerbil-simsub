@@ -193,7 +193,7 @@
   (let (result (make-hash-table-eq))
     (for ((values _ samples) deliveries)
       (let* ((samples (reverse samples))
-             (start (cadr samples)))
+             (start (cdar samples)))
         (let lp ((rest samples))
           (match rest
             ([[peer . ts] . rest]
