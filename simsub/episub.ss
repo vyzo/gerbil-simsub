@@ -19,6 +19,7 @@
 ;; D-choke: minimum acceptable mesh degree excluding choked peers
 ;; choke-strategy: the strategy to use for making choking decisions
 ;;  'order-avg:      use delivery order average
+;;  'order-median:   use delivery order median
 ;;  'latency-avg:    use delivery latency average
 ;;  'latency-median: use delivery latency median
 ;;  'latency-p90:    use delivery latency 90th percentale
@@ -59,6 +60,7 @@
   (def choke-strategy
     (case (overlay/v1.2-choke-strategy params)
       ((order-avg)      choke-strategy-order-avg)
+      ((order-median)   choke-strategy-order-median)
       ((latency-avg)    choke-strategy-latency-avg)
       ((latency-median) choke-strategy-latency-median)
       ((latency-p90)    choke-strategy-latency-p90)
@@ -164,6 +166,10 @@
 (def (choke-strategy-order-avg deliveries mesh min-samples)
   (let (stat (stat-delivery-order deliveries mesh))
     (stat-collect stat stat-average min-samples)))
+
+(def (choke-strategy-order-median deliveries mesh min-samples)
+  (let (stat (stat-delivery-order deliveries mesh))
+    (stat-collect stat stat-median min-samples)))
 
 (def (choke-strategy-latency-avg deliveries mesh min-samples)
   (let (stat (stat-delivery-latency deliveries mesh))
