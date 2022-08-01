@@ -4,7 +4,6 @@
 
 (import :gerbil/gambit
         :std/actor
-        :std/logger
         :std/sugar
         :std/iter
         :std/misc/threads
@@ -22,15 +21,18 @@
 
 (def (start-simulation! script: script
                         router: router
+                        params: params
                         trace: trace
                         nodes: nodes
                         N-connect: (N-connect 10)
                         receive: (receive trace-deliver!)
+                        rng: (rng default-random-source)
                         min-latency: (min-latency .010)
-                        max-latency: (max-latency .150))
+                        max-latency: (max-latency .150)
+                        jitter: (jitter .1))
   (start-logger!)
-  (spawn/group 'simulator simulator-main script nodes N-connect trace router receive
-               min-latency max-latency))
+  (spawn/group 'simulator simulator-main script nodes N-connect trace router params receive
+               rng min-latency max-latency jitter))
 
 (def (stop-simulation! simd)
   (!!simulator.shutdown simd)
@@ -39,10 +41,10 @@
    (finally
     (thread-group-kill! (thread-thread-group simd)))))
 
-(def (simulator-main script nodes N-connect trace router receive
-                     min-latency max-latency)
+(def (simulator-main script nodes N-connect trace router params receive
+                     rng min-latency max-latency jitter)
   (def router-actor
-    (let (thr (spawn/name 'router simulator-router min-latency max-latency))
+    (let (thr (spawn/name 'router simulator-router rng min-latency max-latency jitter))
       (spawn/name 'monitor simulator-monitor (current-thread) thr)
       thr))
 
@@ -58,7 +60,7 @@
     (parameterize ((current-protocol-trace (current-thread))
                    (current-protocol-router router-actor))
       (map (lambda (id)
-             (let (thr (spawn/name 'peer simulator-node router receive))
+             (let (thr (spawn/name 'peer simulator-node router params receive))
                (spawn/name 'monitor simulator-monitor (current-thread) thr)
                (thread-specific-set! thr id)
                thr))
@@ -66,7 +68,7 @@
 
   (def (run)
     (for (peer peer-nodes)
-      (let* ((peers (shuffle (remq peer peer-nodes)))
+      (let* ((peers (shuffle (remq peer peer-nodes) rng))
              (peers (if (> (length peers) N-connect)
                       (take peers N-connect)
                       peers)))
@@ -79,7 +81,7 @@
          (shutdown!))
         ((!simulator.join actor)
          (unless (eq? actor script-node)
-           (warning "actor exited unexpectedly ~a" actor))
+           (warnf "actor exited unexpectedly ~a" actor))
          (when (eq? actor script-node)
            (shutdown!)))
         ((!protocol.trace ts msg)
@@ -100,25 +102,29 @@
    (run)
    (catch (e)
      (unless (eq? 'shutdown e)
-       (log-error "unhandled exception" e)
+       (errorf "unhandled exception: ~a" e)
        (raise e)))))
 
-(def (simulator-router min-latency max-latency)
+(def (simulator-router rng min-latency max-latency jitter)
   (def send-message #f)
   (def mqueue (make-pqueue (lambda (m) (time->seconds (car m)))))
   (def latencies (make-hash-table))
+  (def random-real (random-source-make-reals rng))
+
+  (def (with-jitter dt)
+    (+ dt (* (random-real) jitter dt)))
 
   (def (latency src dest)
     (let (key1 (cons src dest))
       (cond
        ((hash-get latencies key1)
-        => values)
+        => with-jitter)
        (else
         (let ((key2 (cons dest src))
               (dt (+ min-latency (* (random-real) (- max-latency min-latency)))))
           (hash-put! latencies key1 dt)
           (hash-put! latencies key2 dt)
-          dt)))))
+          (with-jitter dt))))))
 
   (def (push! dt msg)
     (let (timeo (make-timeout dt))
@@ -152,7 +158,7 @@
   (try
    (loop)
    (catch (e)
-     (log-error "unhandled exception" e)
+     (errorf "unhandled exception: ~a" e)
      (raise e))))
 
 (def (simulator-driver script)
@@ -160,18 +166,18 @@
     (try
      (script peers)
      (catch (e)
-       (log-error "unhandled exception" e)
+       (errorf "unhandled exception: ~a" e)
        (raise e))))
 
   (<- ((!simulator.start peers)
        (run peers))))
 
-(def (simulator-node router receive)
+(def (simulator-node router params receive)
   (def (run peers)
     (try
-     (router receive peers)
+     (router params receive peers)
      (catch (e)
-       (log-error "unhandled exception" e)
+       (errorf "unhandled exception: ~a" e)
        (raise e))))
 
   (<- ((!simulator.start peers)

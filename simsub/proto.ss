@@ -7,7 +7,8 @@
 (defproto pubsub
   event:
   (connect)
-  (publish id msg))
+  (publish id msg)
+  (message id msg))
 
 (defproto gossipsub
   extend: pubsub
@@ -15,4 +16,10 @@
   (ihave ids)
   (iwant ids)
   (graft)
-  (prune))
+  (prune px))
+
+(defproto episub
+  extend: gossipsub
+  event:
+  (choke)
+  (unchoke))
