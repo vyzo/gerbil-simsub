@@ -1,4 +1,4 @@
-* An abstract protocol simulator for the gossipsub family of protocols
+* An Abstract Protocol Simulator for the GOSSIPSUB family of protocols
 
 This package contains an abstract protocol simulator for the
 [[https://github.com/libp2p/specs/tree/master/pubsub/gossipsub][gossipsub]]
@@ -41,7 +41,7 @@ using keyword arguments; see `simple-simulation` and
 `start-simulation!` for the relevant keywords.
 
 
-* Protocol Implementations
+* Protocol implementations
 
 Protocols are implemented as actors.
 The following protocols are currently supported:
@@ -60,13 +60,9 @@ The following protocols are currently supported:
 * Running simulations
 
 Here is an example, running simulations using gossipsub v1.0 and
-gossipsub v1.1. Note the explicit use and reset of the rng state to
-ensure that the underlying topology and source selection is the same
-for both runs and that we compare apples to apples. Despite that,
-there can still be some variance between runs, because actors use the
-default rng and even if that state is reset, unfortunately there can
-be variance between runs because of the threading system and gc (the
-simulation is real-time).
+gossipsub v1.1. Note the explicit use of the rng to ensure that the
+underlying topology and source selection is the same for both runs and
+that we compare apples to apples.
 
 By default, the simulation creates a network of 100 nodes, with each
 node randomly connected to 20 other nodes.  There are 5 (randomly
@@ -75,47 +71,72 @@ All these parameters can be changed for longer and bigger simulations,
 using keyword arguments.
 
 #+BEGIN_EXAMPLE
-> (import :vyzo/simsub/scripts)
-> (def rng (make-random-source))
-> (random-source-randomize! rng)
-> (def rng-state (random-source-state-ref rng))
-> (simple-gossipsub/v1.0-simulation trace: void rng: rng)
+> (import :vyzo/simsub/scripts :vyzo/simsub/env)
+> (def rng (make-rng))
+> (simple-gossipsub/v1.0-simulation rng: rng)
 === simulation summary ===
 nodes: 100
 messages: 10
 sources: 5
 publish: 10
 deliver: 1000
-!!gossipsub.graft: 365
 !!pubsub.publish: 10
-!!gossipsub.ihave: 7104
+!!gossipsub.iwant: 44
+!!pubsub.message: 6280
+!!gossipsub.graft: 372
 !!pubsub.connect: 2000
-!!gossipsub.prune: 8
-!!pubsub.message: 6142
-!!gossipsub.iwant: 28
+!!gossipsub.prune: 7
+!!gossipsub.ihave: 7212
 === delivery latency histogram ===
-     0-100ms	   110	***********
-   100-200ms	   730	*************************************************************************
-   200-300ms	   150	***************
-> (random-source-state-set! rng rng-state)
-> (simple-gossipsub/v1.1-simulation trace: void rng: rng)
+     0-100ms	   156	***************
+   100-200ms	   722	************************************************************************
+   200-300ms	   112	***********
+> (simple-gossipsub/v1.1-simulation rng: rng)
 === simulation summary ===
 nodes: 100
 messages: 10
 sources: 5
 publish: 10
 deliver: 1000
-!!gossipsub.graft: 365
 !!pubsub.publish: 10
-!!gossipsub.ihave: 9694
+!!gossipsub.iwant: 30
+!!pubsub.message: 6738
+!!gossipsub.graft: 372
 !!gossipsub.prune: 7
-!!pubsub.connect: 2061
-!!pubsub.message: 6676
-!!gossipsub.iwant: 24
+!!pubsub.connect: 2072
+!!gossipsub.ihave: 9516
 === delivery latency histogram ===
-     0-100ms	   564	********************************************************
-   100-200ms	   426	******************************************
+     0-100ms	   527	****************************************************
+   100-200ms	   463	**********************************************
 #+END_EXAMPLE
+
+* Reproducible simulations, non-determinism and fractals
+
+Note that it is generally desirable for a simulation framework to
+produce reproducible artifacts. This is however is very tricky when
+dealing with a real-time multi-threaded simulation, as even if you
+completely nail down the random number generators, you will still have
+to deal with non-determinism stemming from concurrency of messages,
+down to the quantum of computation.
+
+The simulation framework takes several steps to ensure that
+simulations are as close to reproducible as possible, at least when it
+comes to the underlying network topology.  The system uses a root rng
+as a template, ie this rng is not used directly, but rather its state
+is used as a template for deterministically constructing all the other
+rngs in the system.  Starting from the template, an rng is derived for
+every actor in the system, so that different threads don't interfere
+with each other in random number generation.  Furthermore, the router
+derives (lazily) an rng for every actor pair that communicates, so
+that the base latency and jitter are deterministic. And finally, every
+operation that works with peer sets for selection is shuffled after
+normalizing, so that small deviations from concurrent events are
+corrected to the extent possible.
+
+Despite all that, the fractal nature of this networks ensures that
+even small timing deviations in some message may result in large
+behavioural deviations; completely deterministic simulations are
+practically impossible and that's the best we can do.
 
 * License
 MIT; © 2018-2022 vyzo

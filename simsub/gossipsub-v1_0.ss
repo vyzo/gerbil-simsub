@@ -22,18 +22,20 @@
 
 ;; gossipsub v1.0 implementation
 (defgossipsub gossipsub/v1.0
-  (params peers mesh mcache)
-  (publish! forward! void gossip! void shuffle prune! void)
+  (params peers mesh mcache rng)
+  (publish! forward! void gossip! void prune-candidates prune! void)
   (def (publish! id msg)
-    (forward-message! #f id msg mesh))
+    (forward-message! #f id msg mesh rng))
   (def (forward! source id msg)
-    (forward-message! source id msg mesh))
+    (forward-message! source id msg mesh rng))
+  (def (prune-candidates mesh)
+    (shuffle/normalize mesh rng))
   (def (prune! peer)
     (send! (!!gossipsub.prune peer [])))
   (def (gossip!)
     (let (mids (mcache-gossip mcache (overlay-gossip-window params)))
       (unless (null? mids)
-        (let* ((all-peers (shuffle peers))
+        (let* ((all-peers (shuffle/normalize peers rng))
                (gossip-peers (filter (lambda (p) (not (memq p mesh))) all-peers))
                (gossip-peers
                 (let (D-gossip (overlay/v1.0-D-gossip params))

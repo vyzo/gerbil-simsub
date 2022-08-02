@@ -5,7 +5,9 @@
 (import :gerbil/gambit
         :std/iter
         :std/actor
-        :std/logger)
+        :std/sort
+        :std/logger
+        :std/misc/shuffle)
 (export #t start-logger!)
 
 (deflogger simsub)
@@ -80,3 +82,20 @@
 (def (time< t1 t2)
   (< (time->seconds t1)
      (time->seconds t2)))
+
+(def (make-rng)
+  (let (new-rng (make-random-source))
+    (random-source-randomize! new-rng)
+    new-rng))
+
+(def (make-subrng rng i j)
+  (let (new-rng (make-random-source))
+    (random-source-state-set! new-rng (random-source-state-ref rng))
+    (random-source-pseudo-randomize! new-rng i j)
+    new-rng))
+
+(def (normalize lst (peer-id thread-specific))
+  (sort lst (lambda (x y) (< (peer-id x) (peer-id y)))))
+
+(def (shuffle/normalize lst rng (peer-id thread-specific))
+  (shuffle (normalize lst peer-id) rng))

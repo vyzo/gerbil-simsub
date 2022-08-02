@@ -46,17 +46,22 @@
                         nodes: (nodes 100)
                         sources: (nsources 5)
                         messages: (messages 10)
-                        message-delay: (message-delay 1)
-                        connect-delay: (connect-delay 5)
+                        message-interval: (message-interval 1)
+                        init-delay: (init-delay 5)
                         connect: (connect 20)
                         linger: (linger 10)
-                        trace: (trace displayln)
+                        trace: (trace void)
                         transcript: (transcript void)
-                        rng: (rng default-random-source)
+                        rng: (rng (make-rng))
                         router: router
                         params: params)
+  (def script-rng
+    (make-subrng rng 3 5))
+
+  (def random-integer
+    (random-source-make-integers script-rng))
+
   (def traces (box []))
-  (def random-integer (random-source-make-integers rng))
 
   (def (my-trace evt)
     (set! (box traces)
@@ -64,15 +69,15 @@
     (trace evt))
 
   (def (my-script peers)
-    (thread-sleep! connect-delay)
-    (let (sources (take (shuffle peers rng) nsources))
+    (thread-sleep! init-delay)
+    (let (sources (take (shuffle peers script-rng) nsources))
       (let lp ((i 0))
         (when (< i messages)
           (let (source (list-ref sources (random-integer nsources)))
             (let (msg (cons 'msg i))
               (trace-publish! i msg)
               (send! (!!pubsub.publish source i msg))))
-          (thread-sleep! message-delay)
+          (thread-sleep! message-interval)
           (lp (1+ i)))))
     (thread-sleep! linger))
 
@@ -113,8 +118,8 @@
                                   nodes:
                                   sources:
                                   messages:
-                                  message-delay:
-                                  connect-delay:
+                                  message-interval:
+                                  init-delay:
                                   connect:
                                   linger:
                                   trace:
