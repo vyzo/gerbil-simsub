@@ -46,7 +46,7 @@
 
 ;; episub experimental implementation
 (defgossipsub gossipsub/v1.2
-  (params peers mesh mcache)
+  (params peers mesh mcache rng)
   (publish! deliver! duplicate! on-heartbeat! handle-message prune-candidates prune! pruned!)
   ;; peers we have choked
   (def choke-in [])
@@ -70,11 +70,11 @@
   (def heartbeat 0)
   ;; implementation
   (def (publish! id msg)
-    (forward-message! #f id msg (if (overlay/v1.1-flood-publish params) peers mesh)))
+    (forward-message! #f id msg (if (overlay/v1.1-flood-publish params) peers mesh) rng))
   (def (deliver! source id msg)
     (mcache-push! deliveries-mcache id)
     (hash-put! deliveries id [(cons source (trace-ts))])
-    (forward-message! source id msg mesh choke-out))
+    (forward-message! source id msg mesh rng choke-out))
   (def (duplicate! source id)
     (hash-update! deliveries id (cut cons (cons source (trace-ts)) <>) []))
   (def (on-heartbeat!)
@@ -99,7 +99,7 @@
         (hash-remove! deliveries mid)))
     ;; send gossip
     (let (mids (mcache-gossip mcache (overlay-gossip-window params)))
-      (gossip/adaptive! params mids peers mesh choke-out)))
+      (gossip/adaptive! rng params mids peers mesh choke-out)))
   (def (handle-message source m)
     (match m
       ((!event (episub.choke))
@@ -107,22 +107,22 @@
       ((!event (episub.unchoke))
        (set! choke-out (remq source choke-out)))))
   (def (prune-candidates mesh)
-    (append (shuffle choke-in)
+    (append (shuffle/normalize choke-in rng)
             (filter (lambda (peer) (not (memq peer choke-in)))
-                    (shuffle mesh))))
+                    (shuffle/normalize mesh rng))))
   (def (prune! peer)
     (when (memq peer choke-in)
       (set! choke-in (remq peer choke-in)))
     (when (memq peer choke-out)
       (set! choke-out (remq peer choke-out)))
-    (prune/px! params peer peers))
+    (prune/px! params peer peers rng))
   (def (pruned! peer)
     (when (memq peer choke-in)
       (set! choke-in (remq peer choke-in))
       ;; if we got pruned and have too few non-choked peers, we need to unchoke someone
       (when (< (- (length mesh) (length choke-in)) (overlay/v1.2-D-choke params))
         (unless (null? choke-in)
-          (let (peer (car (shuffle choke-in)))
+          (let (peer (car (shuffle choke-in rng)))
             (set! choke-in (remq peer choke-in))
             (send! (!!episub.unchoke peer))))))
     (when (memq peer choke-out)

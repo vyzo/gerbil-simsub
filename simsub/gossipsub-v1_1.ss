@@ -34,20 +34,23 @@
 ;;       properties of the protocol. Nonetheless, should you wish to study its properties, it
 ;;       should be straightforward to implement.
 (defgossipsub gossipsub/v1.1
-  (params peers mesh mcache)
-  (publish! forward! void gossip! void shuffle prune! void)
+  (params peers mesh mcache rng)
+  (publish! forward! void gossip! void prune-candidates prune! void)
   (def (publish! id msg)
-    (forward-message! #f id msg (if (overlay/v1.1-flood-publish params) peers mesh)))
+    (forward-message! #f id msg (if (overlay/v1.1-flood-publish params) peers mesh) rng))
   (def (forward! source id msg)
-    (forward-message! source id msg mesh))
+    (forward-message! source id msg mesh rng))
+  (def (prune-candidates mesh)
+    (shuffle/normalize mesh rng))
   (def (prune! peer)
-    (prune/px! params peer peers))
+    (prune/px! params peer peers rng))
   (def (gossip!)
     (let (mids (mcache-gossip mcache (overlay-gossip-window params)))
-      (gossip/adaptive! params mids peers mesh))))
+      (gossip/adaptive! rng params mids peers mesh))))
 
-(def (prune/px! params peer peers)
+(def (prune/px! params peer peers rng)
   (let* ((px (overlay/v1.1-px params))
+         (peers (shuffle/normalize peers rng))
          (peers
           (cond
            ((zero? px) [])
@@ -57,9 +60,12 @@
             (remq peer peers)))))
     (send! (!!gossipsub.prune peer peers))))
 
-(def (gossip/adaptive! params mids peers mesh (choked []))
+(def (gossip/adaptive! rng params mids peers mesh (choked []))
+  (def random-real
+    (random-source-make-reals rng))
+
   (unless (null? mids)
-    (let* ((candidates (filter (lambda (p) (not (memq p mesh))) (shuffle peers)))
+    (let* ((candidates (filter (lambda (p) (not (memq p mesh))) (shuffle/normalize peers rng)))
            (gossip-peers
             (for/fold (r []) (peer candidates)
               (if (< (random-real) (overlay/v1.1-gossip-factor params))
@@ -70,9 +76,9 @@
               (let* ((candidates (filter (lambda (p) (not (memq p gossip-peers))) candidates))
                      (to-add (- (overlay/v1.0-D-gossip params) (length gossip-peers)))
                      (to-add (min (length candidates) to-add)))
-                (append (take candidates to-add) gossip-peers))
+                (foldl cons gossip-peers (take candidates to-add)))
               gossip-peers))
            (gossip-peers
-            (append choked gossip-peers)))
+            (foldl cons gossip-peers choked)))
       (for (peer gossip-peers)
         (send! (!!gossipsub.ihave peer mids))))))

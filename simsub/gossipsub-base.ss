@@ -17,17 +17,22 @@
 ;; D-low: mesh low watermark
 ;; D-hi: mesh high water mark
 ;; heartbeat: heartbeat period in seconds
+;; initial-heartbeat-delay: delay before the first heartbeat in seconds
 ;; history: mcache history length
 ;; gossip-window: mcache gossip window
-(defstruct overlay (D D-low D-high heartbeat history gossip-window)
+(defstruct overlay (D D-low D-high heartbeat initial-heartbeat-delay history gossip-window)
   constructor: :init!)
 
 (defmethod {:init! overlay}
   (lambda (self D: (D 6) D-low: (D-low 4) D-high: (D-high 12)
            heartbeat: (heartbeat 1)
+           initial-heartbeat-delay: (initial-heartbeat-delay 1)
            history: (history 120)
            gossip-window: (gossip-window 3))
-    (struct-instance-init! self D D-low D-high heartbeat history gossip-window)))
+    (struct-instance-init! self
+                           D D-low D-high
+                           heartbeat initial-heartbeat-delay
+                           history gossip-window)))
 
 ;; message cache
 ;; window: messages in the current heartbeat window
@@ -35,14 +40,13 @@
 
 ;; gossipsub actor definition
 (defrules defgossipsub ()
-
   ((_ proto
       ;; state variables
       ;; params: the overlay parameters
       ;; peers: the local identifier of currently connected peers
       ;; mesh: the local identifier of current mesh peers
       ;; mcache: the message cache
-      (params peers mesh mcache)
+      (params peers mesh mcache rng)
       ;; hooks for protocol specific logic
       ;; publish!: publish a new message from this node
       ;; deliver!: deliver and forward a new message
@@ -57,7 +61,10 @@
       local-defs ...)
    ;; receive: lambda (msg-id msg-data) -- delivers received messages
    ;; initial-peers: list of peers to connect at start up
-   (def (proto params receive initial-peers)
+   (def (proto params receive initial-peers rng ready! go!)
+     (def random-real
+       (random-source-make-reals rng))
+
      ;; seen messages: message-id -> data
      (def messages (make-hash-table-eqv))
      ;; message window/history management
@@ -67,8 +74,7 @@
      ;; mesh peers
      (def mesh [])
      ;; heartbeat: next heartbeat (abs time)
-     (def heartbeat
-       (make-timeout (1+ (* (random-real) (overlay-heartbeat params)))))
+     (def heartbeat #f)
 
      ;; splice protocol-specific local defs
      local-defs ...
@@ -82,6 +88,14 @@
          (set! peers
            (foldl cons peers new-peers))))
 
+     (def (connect-complete)
+       (let lp ()
+         (<- ((!pubsub.connect)
+              (unless (memq @source peers)
+                (set! peers (cons @source peers)))
+              (lp))
+             (else (void)))))
+
      (def (heartbeat!)
        (def d (length mesh))
 
@@ -90,15 +104,15 @@
          (when (< d D-low)
            ;; we need some links, add some peers and send GRAFT
            (let* ((i-need (- D d))
+                  (candidates (shuffle/normalize peers rng))
                   (candidates (filter (lambda (peer) (not (memq peer mesh)))
-                                      peers))
-                  (candidates (shuffle candidates))
+                                      candidates))
                   (new-peers (if (> (length candidates) i-need)
                                (take candidates i-need)
                                candidates)))
              (for (peer new-peers)
                (send! (!!gossipsub.graft peer)))
-             (set! mesh (append mesh new-peers))))
+             (set! mesh (foldl cons mesh new-peers))))
 
          (when (> d D-high)
            ;; we have too many links, drop some peers and send PRUNE
@@ -161,6 +175,7 @@
               (set! mesh (cons @source mesh))))
 
            ((!gossipsub.prune px)
+
             (when (memq @source mesh)
               (set! mesh (remq @source mesh)))
             ;; when Peer eXchange is in use (gossipsub v1.1 and later) connect to the exchanged
@@ -179,13 +194,20 @@
 
      (try
       (connect initial-peers)
+      (ready!)
+      (connect-complete)
+      (go!)
+      (set! heartbeat
+        (let ((initial-heartbeat-delay (overlay-initial-heartbeat-delay params))
+              (heartbeat-interval (overlay-heartbeat params)))
+         (make-timeout (+ (* (random-real) heartbeat-interval) initial-heartbeat-delay))))
       (loop)
       (catch (e)
         (errorf "unhandled exception: ~a" e))))))
 
 ;; basic message forwarding
-(def (forward-message! source id msg mesh (exclude []))
-  (for (peer mesh)
+(def (forward-message! source id msg mesh rng (exclude []))
+  (for (peer (shuffle/normalize mesh rng))
     (unless (or (eq? source peer) (memq peer exclude))
       (send! (!!pubsub.message peer id msg)))))
 

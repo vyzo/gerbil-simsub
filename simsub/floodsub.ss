@@ -8,7 +8,7 @@
         :vyzo/simsub/env)
 (export #t)
 
-(def (floodsub _ receive initial-peers)
+(def (floodsub _ receive initial-peers rng ready! go!)
   (def messages (make-hash-table-eqv))
   (def peers [])
 
@@ -20,6 +20,14 @@
       (set! peers
         (foldl cons peers new-peers))))
 
+  (def (connect-complete)
+    (let lp ()
+      (<- ((!pubsub.connect)
+           (unless (memq @source peers)
+             (set! peers (cons @source peers)))
+           (lp))
+          (else (void)))))
+
   (def (loop)
     (<- ((!pubsub.connect)
          (unless (memq @source peers)
@@ -30,7 +38,7 @@
          ;; deliver
          (receive id msg)
          ;; and forward
-         (for (peer peers)
+         (for (peer (shuffle/normalize peers rng))
            (send! (!!pubsub.message peer id msg))))
 
         ((!pubsub.message id msg)
@@ -39,13 +47,16 @@
            ;; deliver
            (receive id msg)
            ;; and forward
-           (for (peer peers)
+           (for (peer (shuffle/normalize peers rng))
              (unless (eq? @source peer)
                (send! (!!pubsub.message peer id msg)))))))
     (loop))
 
   (try
    (connect initial-peers)
+   (ready!)
+   (connect-complete)
+   (go!)
    (loop)
    (catch (e)
      (errorf "unhandled exception: ~a" e))))
