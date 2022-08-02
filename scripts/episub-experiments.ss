@@ -43,7 +43,7 @@
                init-delay: 10
                trace: void)))))
 
-(for* ((nodes '(100 250 500))
+(for* ((nodes '(100))
        (sources '(5 10 20))
        (messages '(60 120 300)))
   (run-simulations nodes sources messages))
