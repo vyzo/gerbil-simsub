@@ -10,7 +10,7 @@ orient programming.
 
 Note: This repo originally contained the first abstract gossipsub
 implementation, before it was deployed in production. Since then,
-gossipsub has evolved significantly and is in production use in severl
+gossipsub has evolved significantly and is in production use in several
 blockchains (Filecoin, ETH2, Celestia, etc...).
 
 The original README
@@ -24,6 +24,8 @@ You can install simsub using gxpkg, the Gerbil package manager:
 #+BEGIN_EXAMPLE
 gxpkg install github.com/vyzo/gerbil-simsub
 #+END_EXAMPLE
+
+Note that simsub requires Gerbil master, as of 08/01/2022.
 
 * The simulation framework
 
@@ -133,7 +135,7 @@ operation that works with peer sets for selection is shuffled after
 normalizing, so that small deviations from concurrent events are
 corrected to the extent possible.
 
-Despite all that, the fractal nature of this networks ensures that
+Despite all that, the fractal nature of these networks ensures that
 even small timing deviations in some message may result in large
 behavioural deviations; completely deterministic simulations are
 practically impossible and that's the best we can do.
