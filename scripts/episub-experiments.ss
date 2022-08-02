@@ -28,7 +28,7 @@
              trace: void)))
   (run-it 'gossipsub/v1.1
           (lambda ()
-            (simple-gossipsub/v1.0-simulation
+            (simple-gossipsub/v1.1-simulation
              nodes: nodes sources: sources messages: messages
              rng: rng
              init-delay: 10
