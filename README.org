@@ -140,5 +140,38 @@ even small timing deviations in some message may result in large
 behavioural deviations; completely deterministic simulations are
 practically impossible and that's the best we can do.
 
+* The virtual time scheduer
+
+By default, simsub will run simulations in real time, using the core
+Gerbil/Gabit scheduler.  This provides great fidelity to simulations,
+but it also limits the scalability of the simulation.  As you run
+bigger simulations will, you will notice that the simulator is
+compute-bound and begins to lag, which invalidates results.
+
+In order to avoid this issue, and provide scalable simulations, simsub
+provides an alternate scheduler that implements virtual time.  The
+scheduler is implemented by redefining a number of thread system
+primitive, such that thread state is tracked, and time advances when
+there are no active threads.  This allows the simulation to scale
+bound only by available memory. The downside is that actual
+computations take 0 virtual time, which may have some effects in the
+concurrency factors of the simulation.  Nonetheless, this should not
+affect the fidelity of simulations because all observable actions
+(messages) take time, as dictated by the router, and hence heartbeats
+and timeouts will not be starved.
+
+In order to use the virtual time scheduler, use the following code before
+running a simulation.
+```
+(import :vyzo/simsub/scheduler)
+(enable-virtual-time-scheduler!)
+```
+
+If you want to reset the clock and throw away intermediate state you
+can reset between simulation runs:
+```
+(virtual-time-scheduler-reset!)
+```
+
 * License
 MIT; © 2018-2022 vyzo
