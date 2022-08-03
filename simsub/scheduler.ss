@@ -109,14 +109,6 @@
     (real-mutex-unlock! mx)))
 
 ;;; scheduler implementation
-;; used by scheduler
-(extern namespace: #f
-  macro-mailbox-cursor
-  macro-mailbox-cursor-set!
-  macro-fifo-next
-  macro-mailbox-fifo
-  macro-fifo-elem)
-
 (def (sched-start! thread)
   (with-lock mx
     (lambda ()
@@ -181,21 +173,15 @@
 (def (sched-recv! thread timeo timeo-val c)
   (with-lock mx
     (lambda ()
-      (let* ((mb (##thread-mailbox-get! thread))
-             (cursor (macro-mailbox-cursor mb))
-             (next (if cursor
-                     (macro-fifo-next cursor)
-                     (macro-mailbox-fifo mb)))
-             (next2 (macro-fifo-next next)))
-        (if (pair? next2)
-          (let (result (macro-fifo-elem next2))
-            (macro-mailbox-cursor-set! mb next)
-            (completion-post! c result))
+      (let* ((none '#(timeout))
+             (msg (real-thread-mailbox-next 0 none)))
+        (if (eq? msg none)
           (begin
             (set! active (1- active))
             (let (abstime (sched-timeout timeo))
               (hash-put! thread-state thread ['recv abstime timeo-val c]))
-            (sched-advance!)))))))
+            (sched-advance!))
+          (completion-post! c msg))))))
 
 (def (sched-sync! thread)
   (with-lock mx
@@ -214,6 +200,8 @@
 (def (sched-advance!)
   (def time #f)
   (def thread #f)
+
+  (thread-yield!)
 
   (when (zero? active)
     (for ((values thr state) thread-state)
