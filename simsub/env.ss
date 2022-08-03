@@ -9,9 +9,12 @@
         :std/logger
         :std/misc/shuffle
         :vyzo/simsub/scheduler)
-(export #t start-logger!)
+(export #t)
 
 (deflogger simsub)
+
+;; start it here to avoid capturing the thread in the vt scheduler.
+(start-logger!)
 
 (def current-protocol-trace
   (make-parameter #f))
@@ -77,12 +80,15 @@
 (def (trace-ts)
   (current-time-point))
 
+(def (current-time)
+  (seconds->time (current-time-point)))
+
 (def (make-timeout dt)
   (seconds->time (+ (current-time-point) dt)))
 
-(def (time< t1 t2)
-  (< (time->seconds t1)
-     (time->seconds t2)))
+(def (time<= t1 t2)
+  (<= (time->seconds t1)
+      (time->seconds t2)))
 
 (def (make-rng)
   (let (new-rng (make-random-source))

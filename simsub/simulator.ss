@@ -32,7 +32,6 @@
                         min-latency: (min-latency .010)
                         max-latency: (max-latency .150)
                         jitter: (jitter .1))
-  (start-logger!)
   (spawn/group 'simulator simulator-main script nodes N-connect trace router params receive
                rng min-latency max-latency jitter))
 
@@ -176,7 +175,7 @@
   (def (push! dt msg)
     (let (timeo (make-timeout dt))
       (pqueue-push! mqueue (cons timeo msg))
-      (when (or (not send-message) (time< timeo send-message))
+      (when (or (not send-message) (time<= timeo send-message))
         (set! send-message timeo))))
 
   (def (pop!)
@@ -184,7 +183,7 @@
       (let lp ()
         (unless (pqueue-empty? mqueue)
           (with ([timeo . msg] (pqueue-peek mqueue))
-            (when (time< timeo now)
+            (when (time<= timeo now)
               (send (message-dest msg) msg)
               (pqueue-pop! mqueue)
               (lp)))))
