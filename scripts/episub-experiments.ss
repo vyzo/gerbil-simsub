@@ -3,6 +3,7 @@
 (import :gerbil/gambit
         :std/format
         :std/iter
+        :vyzo/simsub/scheduler
         :vyzo/simsub/scripts
         :vyzo/simsub/episub)
 
@@ -17,8 +18,11 @@
     (printf "+++ ~a~n" what)
     (##gc)
     (run))
+  (def (reset!)
+    (virtual-time-scheduler-reset!))
 
   (printf ">>> Running simulations with nodes: ~a, sources: ~a, messages: ~a, rng-state: ~a~n" nodes sources messages rng-state)
+  (enable-virtual-time-scheduler!)
   (run-it 'gossipsub/v1.0
           (lambda ()
             (simple-gossipsub/v1.0-simulation
@@ -26,6 +30,7 @@
              rng: rng
              init-delay: 10
              trace: void)))
+  (reset!)
   (run-it 'gossipsub/v1.1
           (lambda ()
             (simple-gossipsub/v1.1-simulation
@@ -34,6 +39,7 @@
              init-delay: 10
              trace: void)))
   (for (strategy '(order-avg order-median latency-avg latency-median latency-p90))
+    (reset!)
     (run-it (format "episub/~a" strategy)
             (lambda ()
               (simple-episub-simulation

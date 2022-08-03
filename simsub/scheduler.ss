@@ -65,6 +65,8 @@
 
 (def (virtual-time-scheduler-reset!)
   (when enabled
+    (while (> (with-lock mx (lambda () active)) 0)
+      (real-thread-sleep! 1))
     (with-lock mx
       (lambda ()
         (set! now 0)

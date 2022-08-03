@@ -124,7 +124,7 @@
                                   linger:
                                   trace:
                                   transcript:)))
-    (thread-join! simulator)
+    (##thread-join! simulator absent-obj absent-obj) ; don't get picked up by the vt scheduler
     (display-summary!)
     (transcript (unbox traces))))
 
