@@ -7,7 +7,8 @@
         :std/actor
         :std/sort
         :std/logger
-        :std/misc/shuffle)
+        :std/misc/shuffle
+        :vyzo/simsub/scheduler)
 (export #t start-logger!)
 
 (deflogger simsub)
@@ -74,10 +75,10 @@
       thread))
 
 (def (trace-ts)
-  (##current-time-point))
+  (current-time-point))
 
 (def (make-timeout dt)
-  (seconds->time (+ (##current-time-point) dt)))
+  (seconds->time (+ (current-time-point) dt)))
 
 (def (time< t1 t2)
   (< (time->seconds t1)

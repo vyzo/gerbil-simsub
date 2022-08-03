@@ -1,9 +1,11 @@
 #!/usr/bin/env gxi
 
-(import :std/build-script)
+(import :std/build-script
+        :std/make)
 
 (defbuild-script
-  '("simsub/env"
+  `((gxc: "simsub/scheduler" ,@(include-gambit-sharp))
+    "simsub/env"
     "simsub/proto"
     "simsub/floodsub"
     "simsub/gossipsub-base"
