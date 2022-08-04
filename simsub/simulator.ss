@@ -7,7 +7,6 @@
         :std/sugar
         :std/iter
         :std/misc/threads
-        :std/misc/shuffle
         :std/misc/pqueue
         :std/misc/barrier
         :std/misc/completion

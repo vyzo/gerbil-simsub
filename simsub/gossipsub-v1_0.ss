@@ -3,7 +3,6 @@
 ;;; baseline gossipsub v1.0 protocol
 
 (import :std/iter
-        :std/misc/shuffle
         (only-in :std/srfi/1 take)
         :vyzo/simsub/proto
         :vyzo/simsub/env

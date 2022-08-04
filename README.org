@@ -25,7 +25,7 @@ You can install simsub using gxpkg, the Gerbil package manager:
 gxpkg install github.com/vyzo/gerbil-simsub
 #+END_EXAMPLE
 
-Note that simsub requires Gerbil master, as of 08/01/2022.
+Note that simsub requires Gerbil v0.17 or newer.
 
 * The simulation framework
 

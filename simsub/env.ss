@@ -106,3 +106,33 @@
 
 (def (shuffle/normalize lst rng (peer-id thread-specific))
   (shuffle (normalize lst peer-id) rng))
+
+;; compatibility shims so that things work with gerbil 0.17
+(cond-expand
+  ((not (defined keyword-rest))
+   (def (keyword-rest kwt . drop)
+     (for-each (lambda (kw) (hash-remove! kwt kw)) drop)
+     (hash-fold (lambda (k v r) (cons* k v r)) [] kwt))
+
+   ;; we also need the rng version of shuffle
+   (def (shuffle lst (rng default-random-source))
+     (vector->list
+      (vector-shuffle!
+       (list->vector lst)
+       rng)))
+
+   (def (vector-shuffle vec (rng default-random-source))
+     (vector-shuffle! (vector-copy vec) rng))
+
+   (def (vector-shuffle! vec (rng default-random-source))
+     (def random-integer
+       (random-source-make-integers rng))
+     (let (len (vector-length vec))
+       (do ((i 0 (##fx+ i 1)))
+           ((##fx= i len) vec)
+         (let* ((j (##fx+ i (random-integer (##fx- len i))))
+                (iv (##vector-ref vec i)))
+           (##vector-set! vec i (##vector-ref vec j))
+           (##vector-set! vec j iv))))))
+  (else
+   (export shuffle)))

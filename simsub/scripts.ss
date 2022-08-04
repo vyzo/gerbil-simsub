@@ -6,7 +6,6 @@
         :std/iter
         :std/format
         :std/sort
-        :std/misc/shuffle
         (only-in :std/srfi/1 take)
         :vyzo/simsub/env
         :vyzo/simsub/proto
