@@ -7,7 +7,6 @@
         :std/actor
         :std/sort
         :std/logger
-        :std/misc/shuffle
         :vyzo/simsub/scheduler)
 (export #t)
 
@@ -135,4 +134,5 @@
            (##vector-set! vec i (##vector-ref vec j))
            (##vector-set! vec j iv))))))
   (else
+   (import :std/misc/shuffle)
    (export shuffle)))
